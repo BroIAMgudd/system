@@ -6,13 +6,13 @@ class EventBind extends Component {
     super(props)
   
     this.state = {
-       message: 'Hello!'
+      message: 'Hello!'
     }
   }
 
   clickHandler = () => {
     this.setState({
-        message: 'Goodbye!'
+      message: 'Goodbye!'
     })
   }
     

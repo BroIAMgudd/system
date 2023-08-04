@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import ChildComponent from './ChildComponent'
 
-class ParentComponet extends Component {
+class ParentComp extends Component {
 
   constructor(props) {
     super(props)
@@ -22,4 +22,4 @@ class ParentComponet extends Component {
   }
 }
 
-export default ParentComponet
+export default ParentComp

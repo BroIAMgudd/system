@@ -1,11 +1,11 @@
 import React from 'react'
 
 function Colums() {
-    const items = []
+  const items = []
   return (
     <>
-        <td>Name</td>
-        <td>Hi_Guys</td>
+      <td>Name</td>
+      <td>Hi_Guys</td>
     </>
   )
 }

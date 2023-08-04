@@ -1,13 +1,12 @@
 import React, { Component } from 'react'
 import './App.css'
-import FragmentDemo from './components/FragmentDemo'
-import Table from './components/Table'
+import UserGreeting from './components/UserGreeting'
 
 class App extends Component {
   render() {
     return (
       <div className='App'>
-        <Table/>
+        <UserGreeting/>
       </div>
     )
   }

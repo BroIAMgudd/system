@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import Login from './Login'
 import Register from './Register'
+import Game from './Game'
 
 class UserGreeting extends Component {
 
@@ -19,11 +20,17 @@ class UserGreeting extends Component {
     })
   }
 
+  handleLogToggle = () => {
+    this.setState({
+      isLoggedIn: !this.state.isLoggedIn
+    })
+  }
+
   render() {
     if (this.state.isLoggedIn) { 
-      return <div></div>
+      return <Game/>
     } else if (!this.state.toggleRegister) {
-      return <Login toggle={this.handleRegToggle}/>
+      return <Login logToggle={this.handleLogToggle} regToggle={this.handleRegToggle}/>
     } else {
       return <Register toggle={this.handleRegToggle}/>
     }

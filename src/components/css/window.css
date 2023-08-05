@@ -1,0 +1,62 @@
+/* Draggable Component */
+.draggable-component {
+  position: absolute;
+  width: 400px;
+  height: 300px;
+  border: 1.25px solid darkgreen;
+  background-color: black;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  color: #656565;
+  font-weight: bold;
+}
+
+/* Draggable Header */
+.header {
+  padding: 10px;
+  background-color: black;
+  border-bottom: 1.25px solid green;
+  cursor: grab;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Buttons Container */
+.buttons-container {
+  cursor: default;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+/* Minimize, Maximize and Close Buttons */
+.buttons-container button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.minimize-btn {
+  color: #656565;
+}
+
+.maximize-btn {
+  color: #656565;
+}
+
+.close-btn {
+  color: #656565;
+}
+
+.content {
+  padding: 15px;
+}
+
+/* Make the cursor change to 'grabbing' while dragging */
+.draggable-component.dragging .header {
+  cursor: grabbing;
+}

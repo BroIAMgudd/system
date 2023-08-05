@@ -1,14 +1,20 @@
 import React, { Component } from 'react'
+import styles from './css/auth.module.css'
 
 class Register extends Component {
   constructor(props) {
     super(props)
+    this.inputRef = React.createRef()
   
     this.state = {
       username: '',
       email: '',
       password: ''
     }
+  }
+
+  componentDidMount() {
+    this.inputRef.current.focus()
   }
 
   handleInputChange = (event) => {
@@ -24,48 +30,52 @@ class Register extends Component {
   };
 
   render() {
-    console.log(this.props)
+    const { username, email, password } = this.state
     return (
-      <div className="register">
+      <div className={styles.register}>
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.1.1/css/all.css"></link>
-        <h1>Register</h1>
-        <form onSubmit={this.handleSubmit}>
-          <label htmlFor="username">
+        <h1 className={styles.header}>Register</h1>
+        <form className={styles.form} onSubmit={this.handleSubmit}>
+          <label className={styles.label} htmlFor="username">
             <i className="fa-solid fa-user"></i>
           </label>
           <input
+            ref={this.inputRef}
+            className={styles.inputInfo}
             type="text"
             name="username"
             placeholder="Enter your username"
-            value={this.state.username}
+            value={username}
             onChange={this.handleInputChange}
             required
           />
-          <label htmlFor="email">
+          <label className={styles.label} htmlFor="email">
             <i class="fa-solid fa-envelope"></i>
           </label>
           <input
+            className={styles.inputInfo}
             type="email"
             name="email"
             placeholder="Enter your email"
-            value={this.state.email}
+            value={email}
             onChange={this.handleInputChange}
             required
           />
-          <label htmlFor="password">
+          <label className={styles.label} htmlFor="password">
             <i className="fa-solid fa-lock"></i>
           </label>
           <input
+            className={styles.inputInfo}
             type="password"
             name="password"
             placeholder="Enter your password"
-            value={this.state.password}
+            value={password}
             onChange={this.handleInputChange}
             required
           />
-          <input type="submit" value="Register" />
+          <input className={styles.submit} type="submit" value="Register" />
         </form>
-        <button onClick={this.props.toggle}>Back to Login</button>
+        <button className={styles.submit} onClick={this.props.toggle}>Back to Login</button>
       </div>
     );
   }

@@ -1,58 +1,68 @@
 import React, { Component } from 'react'
-import './login.css'
+import styles from './css/auth.module.css'
 
 export class Login extends Component {
 
   constructor(props) {
     super(props)
+    this.inputRef = React.createRef()
 
     this.state = {
       username: '',
-      password: '',
-      showRegister: false
+      password: ''
     }
   }
 
-  toggleRegister = () => {
-    this.setState((prevState) => ({ showRegister: !prevState.showRegister }));
+  componentDidMount() {
+    this.inputRef.current.focus()
+  }
+
+  handleInputChange = (event) => {
+    const { name, value } = event.target;
+    this.setState({ [name]: value });
   };
 
-  handleUsernameChange = (event) => {
-    this.setState({
-      username: event.target.value
-    })
-  }
-
-  handlePasswordChange = (event) => {
-    this.setState({
-      password: event.target.value
-    })
-  }
-
   submitLogin = (event) => {
-    alert(`${this.state.username}, ${this.state.password}`)
+    // const { username, password } = this.states
+    this.props.logToggle()
     event.preventDefault()
   };
 
   render() {
     const { username, password } = this.state
-    console.log(this.props.toggle)
     return (
-      <div className="login">
+      <div className={styles.login}>
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.1.1/css/all.css"></link>
-        <h1>Login</h1>
-        <form onSubmit={this.submitLogin}>
-          <label htmlFor="username">
+        <h1 className={styles.header}>Login</h1>
+        <form className={styles.form} onSubmit={this.submitLogin}>
+          <label className={styles.label} htmlFor="username">
             <i className="fa-solid fa-user"></i>
           </label>
-          <input type='text' placeholder="Username" value={username} onChange={this.handleUsernameChange} required />
-          <label htmlFor="password">
+          <input 
+            ref={this.inputRef}
+            className={styles.inputInfo}
+            type='text'
+            name='username'
+            placeholder="Enter your username"
+            value={username} 
+            onChange={this.handleInputChange} 
+            required 
+          />
+          <label className={styles.label} htmlFor="password">
             <i className="fa-solid fa-lock"></i>
           </label>
-          <input type="password" placeholder="Password" value={password} onChange={this.handlePasswordChange} required />
-          <input type="submit" value="Login" />
+          <input
+            className={styles.inputInfo}
+            type="password"
+            name="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={this.handleInputChange}
+            required
+          />
+          <input className={styles.submit} type="submit" value="Login" />
         </form>
-        <button onClick={this.props.toggle}>Create an Account</button>
+        <button className={styles.submit} onClick={this.props.regToggle}>Create an Account</button>
         {/* TODO: Create a lost passoword button */}
       </div>
     );

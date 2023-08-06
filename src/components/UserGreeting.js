@@ -2,6 +2,9 @@ import React, { Component } from 'react'
 import Login from './Login'
 import Register from './Register'
 import Game from './Game'
+import io from "socket.io-client";
+
+const socket = io.connect("http://localhost:5000");
 
 class UserGreeting extends Component {
 
@@ -28,11 +31,11 @@ class UserGreeting extends Component {
 
   render() {
     if (this.state.isLoggedIn) { 
-      return <Game/>
+      return <Game socket={socket}/>
     } else if (!this.state.toggleRegister) {
-      return <Login logToggle={this.handleLogToggle} regToggle={this.handleRegToggle}/>
+      return <Login socket={socket} logToggle={this.handleLogToggle} regToggle={this.handleRegToggle}/>
     } else {
-      return <Register toggle={this.handleRegToggle}/>
+      return <Register socket={socket} regToggle={this.handleRegToggle}/>
     }
   }
 }

@@ -1,32 +1,47 @@
-import React, { Component } from 'react'
-import styles from './css/auth.module.css'
+import React, { Component } from 'react';
+import styles from './css/auth.module.css';
 
 class Register extends Component {
+
   constructor(props) {
-    super(props)
-    this.inputRef = React.createRef()
-  
+    super(props);
+    this.inputRef = React.createRef();
+
     this.state = {
       username: '',
       email: '',
-      password: ''
-    }
+      password: '',
+    };
   }
 
+  submitRegister = (event) => {
+    const { username, email, password } = this.state;
+    const { socket } = this.props;
+    
+    socket.emit('register', { username, email, password });  
+  
+    event.preventDefault();
+  };  
+
   componentDidMount() {
-    this.inputRef.current.focus()
+    this.inputRef.current.focus();
+    // Add event listener for register success and error
+    const { socket } = this.props;
+    if (socket) {
+      socket.on('registerSuccess', (data) => {
+        console.log(data.message); // Handle successful register
+        this.props.logToggle();
+      });
+  
+      socket.on('registerError', (data) => {
+        console.error(data.error); // Handle register error
+      });
+    }
   }
 
   handleInputChange = (event) => {
     const { name, value } = event.target;
     this.setState({ [name]: value });
-  };
-
-  handleSubmit = (event) => {
-    event.preventDefault();
-    // Add your registration logic here
-    // For example, you can handle form submission or API calls to register the user.
-    console.log('Registration details:', this.state);
   };
 
   render() {
@@ -35,22 +50,22 @@ class Register extends Component {
       <div className={styles.register}>
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.1.1/css/all.css"></link>
         <h1 className={styles.header}>Register</h1>
-        <form className={styles.form} onSubmit={this.handleSubmit}>
+        <form className={styles.form} onSubmit={this.submitRegister}>
           <label className={styles.label} htmlFor="username">
             <i className="fa-solid fa-user"></i>
           </label>
-          <input
+          <input 
             ref={this.inputRef}
             className={styles.inputInfo}
-            type="text"
-            name="username"
+            type='text'
+            name='username'
             placeholder="Enter your username"
-            value={username}
-            onChange={this.handleInputChange}
-            required
+            value={username} 
+            onChange={this.handleInputChange} 
+            required 
           />
           <label className={styles.label} htmlFor="email">
-            <i class="fa-solid fa-envelope"></i>
+            <i className="fa-solid fa-envelope"></i>
           </label>
           <input
             className={styles.inputInfo}
@@ -75,7 +90,7 @@ class Register extends Component {
           />
           <input className={styles.submit} type="submit" value="Register" />
         </form>
-        <button className={styles.submit} onClick={this.props.toggle}>Back to Login</button>
+        <button className={styles.submit} onClick={this.props.regToggle}>Back to Login</button>
       </div>
     );
   }

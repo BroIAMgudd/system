@@ -1,31 +1,49 @@
-import React, { Component } from 'react'
-import styles from './css/auth.module.css'
+import React, { Component } from 'react';
+import styles from './css/auth.module.css';
 
-export class Login extends Component {
-
+class Login extends Component {
   constructor(props) {
-    super(props)
-    this.inputRef = React.createRef()
+    super(props);
+    this.inputRef = React.createRef();
 
     this.state = {
       username: '',
-      password: ''
-    }
+      password: '',
+    };
   }
 
+  submitLogin = (event) => {
+    const { username, password } = this.state;
+    const { socket } = this.props;
+  
+    // Check if the socket exists before emitting the event
+    if (socket) {
+      // Emit the login event to the server
+      socket.emit('login', { username, password });
+    }
+  
+    event.preventDefault();
+  };  
+
   componentDidMount() {
-    this.inputRef.current.focus()
+    this.inputRef.current.focus();
+    // Add event listener for login success and error
+    const { socket } = this.props;
+    if (socket) {
+      socket.on('loginSuccess', (data) => {
+        console.log(data.message); // Handle successful login
+        this.props.logToggle();
+      });
+  
+      socket.on('loginError', (data) => {
+        console.error(data.error); // Handle login error
+      });
+    }
   }
 
   handleInputChange = (event) => {
     const { name, value } = event.target;
     this.setState({ [name]: value });
-  };
-
-  submitLogin = (event) => {
-    // const { username, password } = this.states
-    this.props.logToggle()
-    event.preventDefault()
   };
 
   render() {

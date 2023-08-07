@@ -150,6 +150,10 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('test', async (data) => {
+    socket.emit('testFinish', { test: data.test });
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });

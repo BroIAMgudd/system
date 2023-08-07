@@ -26,9 +26,9 @@ class Game extends Component {
     const { socket, id, username } = this.props;
 
     if (socket) {
-      socket.emit('getUser' );
+      socket.emit('getUser');
       socket.on('receiveUser', (data) => {
-        const { ip,  cpu, network, harddrive, usb } = data.system;
+        const { ip, cpu, network, harddrive, usb } = data.system;
 
         this.setState({
           id: id,
@@ -38,14 +38,10 @@ class Game extends Component {
           network: network,
           harddrive: harddrive,
           usb: usb
-        },() => {
+        }, () => {
           console.log(this.state);
         });
       });
-  
-      // socket.on('example', (data) => {
-      //   console.log(data.example);
-      // });
     }
   }
 
@@ -60,7 +56,7 @@ class Game extends Component {
   render() {
     return (
       <>
-        {this.state.winRender.term ? <DragComp name='Terminal' short='term' openClose={this.openClose}/> : null}
+        {this.state.winRender.term ? <DragComp name='Terminal' short='term' openClose={this.openClose} socket={this.props.socket}/> : null}
         {this.state.winRender.task ? <DragComp name='Task Manager' short='task' openClose={this.openClose}/> : null}
         {this.state.winRender.log ? <DragComp name='Log Manager' short='log' openClose={this.openClose}/> : null}
       </>

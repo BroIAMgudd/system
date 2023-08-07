@@ -28,6 +28,18 @@ class Terminal extends Component {
     };
   }
 
+  componentDidMount() {
+    // Add event listener for login success and error
+    const { socket } = this.props;
+
+    if (socket) {
+      socket.emit('test', { test: 'test1234' });
+      socket.on('testFinish', (data) => {
+        console.log(`TermRender: ${data.test}`);
+      });
+    }
+  }
+
   handleChange = (e) => {
     this.setState({ input: e.target.value });
   };

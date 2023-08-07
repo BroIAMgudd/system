@@ -60,7 +60,7 @@ class DragComp extends Component {
 
   render() {
     const { positionX, positionY, name } = this.state
-    const { openClose, short } = this.props
+    const { openClose, short, socket } = this.props
 
     return (
       <div
@@ -82,7 +82,7 @@ class DragComp extends Component {
           </div>
         </div>
         <div className="content">
-          <WindowRenderer name={name}/>
+          <WindowRenderer name={name} socket={socket}/>
         </div>
       </div>
     );

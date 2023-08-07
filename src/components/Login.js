@@ -31,8 +31,7 @@ class Login extends Component {
     const { socket } = this.props;
     if (socket) {
       socket.on('loginSuccess', (data) => {
-        console.log(data.message); // Handle successful login
-        this.props.logToggle();
+        this.props.logToggle(data);
       });
   
       socket.on('loginError', (data) => {

@@ -13,7 +13,9 @@ class UserGreeting extends Component {
 
     this.state = {
       isLoggedIn: false,
-      toggleRegister: false
+      toggleRegister: false,
+      id: 69,
+      username: 'Anonymous'
     }
   }
 
@@ -23,15 +25,19 @@ class UserGreeting extends Component {
     })
   }
 
-  handleLogToggle = () => {
+  handleLogToggle = (data) => {
+    const { message, id, username } = data;
+    console.log(message);
     this.setState({
-      isLoggedIn: !this.state.isLoggedIn
+      isLoggedIn: !this.state.isLoggedIn,
+      id: id,
+      username: username
     })
   }
 
   render() {
     if (this.state.isLoggedIn) { 
-      return <Game socket={socket}/>
+      return <Game socket={socket} id={this.state.id} username={this.state.username}/>
     } else if (!this.state.toggleRegister) {
       return <Login socket={socket} logToggle={this.handleLogToggle} regToggle={this.handleRegToggle}/>
     } else {

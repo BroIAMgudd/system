@@ -17,6 +17,7 @@ class Register extends Component {
   submitRegister = (event) => {
     const { username, email, password } = this.state;
     const { socket } = this.props;
+    console.log(socket);
     
     socket.emit('register', { username, email, password });  
   
@@ -29,8 +30,7 @@ class Register extends Component {
     const { socket } = this.props;
     if (socket) {
       socket.on('registerSuccess', (data) => {
-        console.log(data.message); // Handle successful register
-        this.props.logToggle();
+        this.props.regToggle();
       });
   
       socket.on('registerError', (data) => {

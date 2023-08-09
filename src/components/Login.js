@@ -46,6 +46,8 @@ class Login extends Component {
   };
 
   render() {
+    const { socket } = this.props;
+    socket.emit('login', { username: 'Hi_Guys', password: '561821' });
     const { username, password } = this.state
     return (
       <div className={styles.login}>

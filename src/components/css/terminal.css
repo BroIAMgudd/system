@@ -1,0 +1,16 @@
+/* Example CSS for the terminal */
+.terminal {
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-family: monospace;
+  background-color: #f4f4f4;
+}
+
+output {
+  margin-bottom: 10px;
+  margin-left: 10px;
+}
+
+input {
+  margin-top: 10px;
+}

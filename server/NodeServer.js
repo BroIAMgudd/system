@@ -26,6 +26,13 @@ const dbConfig = {
 
 const randIP = () => Array(4).fill(0).map((_, i) => Math.floor(Math.random() * 255) + (i === 0 ? 1 : 0)).join('.');
 
+isValidIPAddress = (ipAddress) => {
+  // Regular expression pattern for IPv4 and IPv6 addresses
+  const ipPattern = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|([0-9A-Fa-f]{1,4}::?)+$/;
+
+  return ipPattern.test(ipAddress);
+}
+
 // WebSocket event handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -147,6 +154,28 @@ io.on('connection', (socket) => {
       connection.release();
     } catch (error) {
       console.error('Get User Error:', error.message);
+    }
+  });
+
+  socket.on('whois', async (data) => {
+    const { ip } = data;
+    if (!isValidIPAddress(ip)) { socket.emit('print', { msg: 'wtf dude stop sending manual requests' }); return; }
+    
+    try {
+      const pool = mysql.createPool(dbConfig);
+      const connection = await pool.getConnection();
+      const [whoisQuery] = await connection.query('SELECT username, cpu, network, harddrive FROM system WHERE ip = ?', [ip]);
+
+      if (whoisQuery.length === 1) {
+        const { username, cpu, network, harddrive } = whoisQuery[0];
+        socket.emit('whois', { username, cpu, network, harddrive });
+      } else {
+        socket.emit('print', { msg: `Invalid IP Address: ${ip}` });
+      }
+
+      connection.release();
+    } catch (error) {
+      console.error('Get Whios Error:', error.message);
     }
   });
 

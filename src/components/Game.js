@@ -38,8 +38,6 @@ class Game extends Component {
           network: network,
           harddrive: harddrive,
           usb: usb
-        }, () => {
-          console.log(this.state);
         });
       });
     }

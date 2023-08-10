@@ -1,28 +1,57 @@
 import React, { Component } from 'react';
-// import '../css/terminal.css'
+import DOMPurify from 'dompurify'
+import '../css/terminal.css'
 
 class Terminal extends Component {
   constructor(props) {
     super(props);
+    this.promptRef = React.createRef();
+    this.inputRef = React.createRef();
+    this.terminalRef = React.createRef();
 
     this.state = {
+      username: 'Anonymous',
       input: '',
       output: [],
+      inputWidth: 0
     };
   }
 
+  componentDidUpdate() {
+    // Scroll the terminal to the bottom
+    this.scrollToBottom();
+  }
+
   componentDidMount() {
+    this.terminalRef.current.addEventListener('click', this.focusInput);
+    this.handleRef();
     // Add event listener for login success and error
     const { socket } = this.props;
 
     if (socket) {
+      socket.on('receiveUser', (data) => {
+        this.setState({
+          username: data.user.username
+        });
+      });
+      
       socket.on('print', (data) => {
         this.print(data.msg)
       });
 
       socket.on('whois', (data) => {
-        console.log(data);
-      });
+        const { username, cpu, network, harddrive } = data;
+      
+        const text = (
+          `Username: ${username}<br>
+          Cpu: ${cpu}<br>
+          Network: ${network}<br>
+          HardDrive: ${harddrive}<br>
+          <br>`
+        );
+      
+        this.print(text);
+      });      
     }
   }
 
@@ -65,7 +94,6 @@ class Terminal extends Component {
       switch (command) {
         case 'say':
           this.print(params.join(' '));
-          // socket.emit('say', { message });
           break;
         case 'clear':
           this.setState({ output: [] });
@@ -76,6 +104,12 @@ class Terminal extends Component {
           } else {
             this.print(`Invalid IP Address: ${params[0]}`);
           }
+          break;
+        case 'connect':
+          socket.emit('connect', { ip: params[0] });
+          break;
+        case 'touch':
+          socket.emit('touch', { name: params[0] });
           break;
         default:
           this.print(`I have not implemented: ${command}`);
@@ -98,26 +132,47 @@ class Terminal extends Component {
     }));
   };
 
-  handleChange = (e) => {
+  handleRef = () => {
+    const promptWidth = this.promptRef.current.offsetWidth;
+    const setWidth = promptWidth + 5
+    
+    this.setState({
+      inputWidth: setWidth
+    });
+  };
+
+  focusInput = () => {
+    this.inputRef.current.focus({ preventScroll: true });
+  };
+
+  scrollToBottom() {
+    if (this.terminalRef.current) {
+      this.terminalRef.current.scrollTop = this.terminalRef.current.scrollHeight;
+    }
+  }
+
+  handleInputChange = (e) => {
     this.setState({ input: e.target.value });
   };
 
   render() {
-    const { input, output } = this.state;
+    const { input, output, inputWidth, username } = this.state;
 
     return (
-      <div className='terminal'>
-        <div>
+      <div ref={this.terminalRef} className='terminal'>
+        <div className='output'>
           {output.map((item, index) => (
-            <div key={index} className={item.type}>
-              {item.text}
-            </div>
+            <div key={index} className={item.type} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(item.text)}} />
           ))}
         </div>
+        <div ref={this.promptRef} className="prompt">C:\Users\{username}{'>'}</div>
         <input
+          ref={this.inputRef}
+          style={{ width: `calc(100% - ${inputWidth}px)` }}
+          className='input'
           type="text"
           value={input}
-          onChange={this.handleChange}
+          onChange={this.handleInputChange}
           onKeyDown={this.handleEnter}
         />
       </div>
@@ -126,3 +181,19 @@ class Terminal extends Component {
 }
 
 export default Terminal;
+{/* <div className="terminal-container">
+        <div className="terminal-prompt">C:\Users\{username}{'>'}</div>
+        <div className="terminal-content">
+          <pre className="terminal-output">{output}</pre>
+          <form onSubmit={this.handleInputSubmit}>
+            <div className="terminal-prompt">{'>'}</div>
+            <input
+              className="terminal-input"
+              type="text"
+              value={input}
+              onChange={this.handleInputChange}
+              autoFocus
+            />
+          </form>
+        </div>
+      </div> */}

@@ -15,8 +15,8 @@ class Game extends Component {
       usb: 5.00,
       winRender: {
         term: true,
-        task: true,
-        log: true
+        task: false,
+        log: false
       }
     }
   }

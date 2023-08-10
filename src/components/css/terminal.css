@@ -1,16 +1,33 @@
-/* Example CSS for the terminal */
 .terminal {
-  border: 1px solid #ccc;
-  padding: 10px;
-  font-family: monospace;
-  background-color: #f4f4f4;
+  background-color: black;
+  color: darkorange;
+  font-family: 'Courier New', monospace;
+  height: 100%;
+  padding: 0 0 0 5px;
 }
 
-output {
+.terminal-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 40px);
+}
+
+.terminal-output {
+  flex-grow: 1;
   margin-bottom: 10px;
-  margin-left: 10px;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
-input {
-  margin-top: 10px;
+.prompt {
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.input {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-family: 'Courier New', monospace;
 }

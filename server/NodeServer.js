@@ -4,6 +4,7 @@ const socketIO = require('socket.io');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const { uptime } = require('process');
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,9 @@ const dbConfig = {
   database: "haxdb"
 };
 
+const pool = mysql.createPool(dbConfig);
+const usersOnline = {};
+
 const randIP = () => Array(4).fill(0).map((_, i) => Math.floor(Math.random() * 255) + (i === 0 ? 1 : 0)).join('.');
 
 isValidIPAddress = (ipAddress) => {
@@ -33,9 +37,23 @@ isValidIPAddress = (ipAddress) => {
   return ipPattern.test(ipAddress);
 }
 
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 // WebSocket event handling
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('Socket Online:', socket.id);
 
   // Handle register event
   socket.on('register', async (data) => {
@@ -53,37 +71,47 @@ io.on('connection', (socket) => {
     if (!password || password.length < 6) {
       return socket.emit('registerError', { error: 'Password must be at least 8 characters long' });
     }
+
     try {
       // Hash the password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create a MySQL connection pool
-      const pool = mysql.createPool(dbConfig);
-
       // Get a connection from the pool
-      const connection = await pool.getConnection();
+      const conn = await pool.getConnection();
 
       // Insert the user into the database with the hashed password
-      await connection.query('INSERT INTO users (username, email, password, sessionID) VALUES (?, ?, ?, ?)', [
+      await conn.query('INSERT INTO users (username, email, password, sessionID) VALUES (?, ?, ?, ?)', [
         username,
         email,
         hashedPassword,
         socket.id
       ]);
 
-      await connection.query('INSERT INTO system (username, ip, cpu, network, harddrive, usb) VALUES (?, ?, ?, ?, ?, ?)', [
+      await conn.query('INSERT INTO system (username, nick, ip, cpu, ram, harddrive) VALUES (?, ?, ?, ?, ?, ?)', [
         username,
+        username.slice(0, 6),
         randIP(),
-        5.00,
-        5.00,
-        5.00,
-        5.00
+        750,
+        2560,
+        5
+      ]);
+
+      await conn.query('INSERT INTO filesystem (status, owner, filename, ext, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [
+        0,
+        username,
+        'netCrawler',
+        'wifi',
+        1,
+        `C:\\Users\\${username.slice(0, 6)}`,
+        765,
+        'v1.0'
       ]);
       
       // Release the connection
-      connection.release();
+      conn.release();
 
       socket.emit('registerSuccess', { message: `${username} registered successfully!` });
+      console.log("Register New User: ", username);
     } catch (error) {
       console.error('Error:', error.message);
       socket.emit('registerError', { error: 'Something went wrong' });
@@ -95,36 +123,33 @@ io.on('connection', (socket) => {
     const { username, password } = data;
 
     try {
-      // Create a MySQL connection pool
-      const pool = mysql.createPool(dbConfig);
-
       // Get a connection from the pool
-      const connection = await pool.getConnection();
+      const conn = await pool.getConnection();
 
       // Fetch the user from the database based on the username
-      const [rows] = await connection.query('SELECT id, username, password FROM users WHERE username = ?', [username]);
+      const [rows] = await conn.query('SELECT id, username, password FROM users WHERE username = ?', [username]);
 
       if (rows.length === 1) {
         const user = rows[0];
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (isPasswordValid) {
-          await connection.query('UPDATE users SET sessionID = ? WHERE username = ?', [
+          await conn.query('UPDATE users SET sessionID = ?, lastOnline = ? WHERE username = ?', [
             socket.id,
+            formatTimestamp(Date.now()),
             username
           ]);
-
           socket.emit('loginSuccess', { message: 'Login successful!',  id: user.id, username: user.username });
         } else {
           socket.emit('loginError', { error: 'Invalid credentials' });
         }
         // Release the connection
-        connection.release();
+        conn.release();
       } else {
         socket.emit('loginError', { error: 'Invalid credentials' });
       }
     } catch (error) {
-      console.error('Error:', error.message);
+      console.error('Login Error:', error.message);
       socket.emit('loginError', { error: 'Something went wrong' });
     }
   });
@@ -132,61 +157,134 @@ io.on('connection', (socket) => {
   socket.on('getUser', async () => {
     // Fetch the user from the database based on the sessionID (socket.id)
     try {
-      // Create a MySQL connection pool
-      const pool = mysql.createPool(dbConfig);
-
       // Get a connection from the pool
-      const connection = await pool.getConnection();
+      const conn = await pool.getConnection();
 
       // Fetch the user from the database based on the sessionID (socket.id)
-      const [userInfo] = await connection.query('SELECT id, username FROM users WHERE sessionID = ?', [socket.id]);
+      const [userInfo] = await conn.query('SELECT id, username FROM users WHERE sessionID = ?', [socket.id]);
 
       if (userInfo.length === 1) {
         user = userInfo[0];
-        const [sysInfo] = await connection.query('SELECT ip, cpu, network, harddrive, usb FROM system WHERE id = ?', [user.id]);
+        const [sysInfo] = await conn.query('SELECT nick, ip, cpu, ram, netName, upload, download, harddrive, usb FROM system WHERE username = ?', [user.username]);
+        conn.release();
+
         if (sysInfo.length === 1) {
           system = sysInfo[0];
           socket.emit('receiveUser', { user, system });
+          socket.emit('setNick', { nick: system.nick });
         }
-      }
 
-      // Release the connection
-      connection.release();
+        //If user makes a new windows and logs in remove old socket from userlist and replace with new instance
+        const existingUserIndex = Object.values(usersOnline).findIndex(name => name.username === user.username);
+        var addUpTime = 0;
+        if (existingUserIndex !== -1) {
+          const objKey = Object.keys(usersOnline)[existingUserIndex];
+          addUpTime = usersOnline[objKey].uptime;
+
+          // Remove the existing user entry
+          delete usersOnline[objKey];
+        }
+        usersOnline[socket.id] = {
+          id: user.id,
+          username: user.username,
+          ip: system.ip,
+          connTo: '',
+          lastHeartbeat: Date.now(),
+          uptime: addUpTime
+        };
+        console.log('User Login:', user.username, 'Socket ID:', socket.id);
+      } else { conn.release(); socket.disconnect();}
     } catch (error) {
       console.error('Get User Error:', error.message);
     }
   });
 
   socket.on('whois', async (data) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
     const { ip } = data;
     if (!isValidIPAddress(ip)) { socket.emit('print', { msg: 'wtf dude stop sending manual requests' }); return; }
     
     try {
-      const pool = mysql.createPool(dbConfig);
-      const connection = await pool.getConnection();
-      const [whoisQuery] = await connection.query('SELECT username, cpu, network, harddrive FROM system WHERE ip = ?', [ip]);
+      const conn = await pool.getConnection();
+      
+      const [whoisQuery] = await conn.query('SELECT username, cpu, ram, netName, harddrive, playtime FROM system WHERE ip = ?', [ip]);
 
       if (whoisQuery.length === 1) {
-        const { username, cpu, network, harddrive } = whoisQuery[0];
-        socket.emit('whois', { username, cpu, network, harddrive });
+        const { username, cpu, ram, netName, harddrive, playtime } = whoisQuery[0];
+        const existingUserIndex = Object.values(usersOnline).findIndex(name => name.username === username);
+        var uptime = 0;
+        
+        if (existingUserIndex !== -1) {
+          const objKey = Object.keys(usersOnline)[existingUserIndex];
+          uptime = usersOnline[objKey].uptime;
+        }
+        uptime += playtime;
+
+        socket.emit('whois', { username, cpu, ram, netName, harddrive, uptime });
       } else {
         socket.emit('print', { msg: `Invalid IP Address: ${ip}` });
       }
 
-      connection.release();
+      conn.release();
     } catch (error) {
       console.error('Get Whios Error:', error.message);
     }
+  });
+
+  socket.on('setNick', async (data) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+
+    const conn = await pool.getConnection();
+
+    await conn.query('UPDATE system SET nick = ? WHERE username = ?', [ data.nick, usersOnline[socket.id].username ]);
+    conn.release();
+
+    socket.emit('setNick', { nick: data.nick });
   });
 
   socket.on('test', async (data) => {
     socket.emit('testFinish', { test: data.test });
   });
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('heartbeat', () => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+    if (usersOnline[socket.id]) {
+      usersOnline[socket.id].lastHeartbeat = Date.now();
+      usersOnline[socket.id].uptime += 30;
+    }
+  });
+
+  socket.on('disconnect', async () => {
+    if (usersOnline[socket.id]) {
+      const user = usersOnline[socket.id].username;
+      console.log('User Offline:', user, 'Socket ID:', socket.id);
+      const uptime = usersOnline[socket.id].uptime;
+      delete usersOnline[socket.id];
+
+      if (uptime > 60) {
+        const conn = await pool.getConnection();
+        await conn.query('UPDATE system SET playtime = playtime + ? WHERE username = ?', [
+          uptime,
+          user
+        ]);
+        conn.release();
+      }
+    } else {
+      console.log('Socket Offline:', socket.id);
+    }
   });
 });
+
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(usersOnline).forEach(socketId => {
+    const user = usersOnline[socketId];
+    if (now - user.lastHeartbeat > 60000) { // Consider socket offline if no heartbeat in the last 60 seconds
+      console.log('Socket offline:', socketId);
+      delete usersOnline[socketId];
+    }
+  });
+}, 90000); // Check heartbeats every 90 seconds
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

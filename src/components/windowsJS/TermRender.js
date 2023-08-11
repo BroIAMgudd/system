@@ -13,13 +13,8 @@ class Terminal extends Component {
       username: 'Anonymous',
       input: '',
       output: [],
-      inputWidth: 0
+      rmWidth: 0
     };
-  }
-
-  componentDidUpdate() {
-    // Scroll the terminal to the bottom
-    this.scrollToBottom();
   }
 
   componentDidMount() {
@@ -29,9 +24,11 @@ class Terminal extends Component {
     const { socket } = this.props;
 
     if (socket) {
-      socket.on('receiveUser', (data) => {
+      socket.on('setNick', (data) => {
         this.setState({
-          username: data.user.username
+          username: data.nick
+        }, () => {
+          this.handleRef();
         });
       });
       
@@ -40,13 +37,15 @@ class Terminal extends Component {
       });
 
       socket.on('whois', (data) => {
-        const { username, cpu, network, harddrive } = data;
+        const { username, cpu, ram, netName, harddrive, uptime } = data;
       
         const text = (
           `Username: ${username}<br>
-          Cpu: ${cpu}<br>
-          Network: ${network}<br>
-          HardDrive: ${harddrive}<br>
+          Network: ${netName}<br>
+          Cpu: ${cpu} kHz<br>
+          Ram: ${ram} bytes <br>
+          Disk Space: ${harddrive} MB<br>
+          Time played: ${uptime} sec<br>
           <br>`
         );
       
@@ -71,10 +70,13 @@ class Terminal extends Component {
   processCommand = async (args) => {
     const { socket } = this.props;
     const [command, ...params] = args;
+    this.print(`C:\\Users\\${this.state.username}> ${args.join(' ')}`);
     
     const cmdList = [
+      "clear",
       "whois",
       "connect",
+      "setnick",
       "bye",
       "ls",
       "rm",
@@ -93,7 +95,7 @@ class Terminal extends Component {
     if (cmdList.includes(command)) {
       switch (command) {
         case 'say':
-          this.print(params.join(' '));
+          this.print(`${params.join(' ')} <br><br>`);
           break;
         case 'clear':
           this.setState({ output: [] });
@@ -103,6 +105,13 @@ class Terminal extends Component {
             socket.emit('whois', { ip: params[0] });
           } else {
             this.print(`Invalid IP Address: ${params[0]}`);
+          }
+          break;
+        case 'setnick':
+          if (params[0].length > 6 || params[0].length < 3) { 
+            this.print(`Nickname needs to be over 3 characters and less than 6 characters: ${params[0]}<br><br>`)
+          } else {
+            socket.emit('setNick', { nick: params[0] });
           }
           break;
         case 'connect':
@@ -115,7 +124,7 @@ class Terminal extends Component {
           this.print(`I have not implemented: ${command}`);
       }
     } else {
-      this.print(`Unknown command: ${command}`);
+      this.print(`Unknown command: ${command}<br><br>`);
     }
   };
 
@@ -129,15 +138,17 @@ class Terminal extends Component {
   print = (text) => {
     this.setState((prevState) => ({
       output: [...prevState.output, { type: 'output', text }],
-    }));
+    }), () => {
+      this.promptRef.current.scrollIntoView();
+    });
   };
 
   handleRef = () => {
     const promptWidth = this.promptRef.current.offsetWidth;
-    const setWidth = promptWidth + 5
+    const rmWidth = promptWidth + 7;
     
     this.setState({
-      inputWidth: setWidth
+      rmWidth: rmWidth
     });
   };
 
@@ -148,6 +159,7 @@ class Terminal extends Component {
   scrollToBottom() {
     if (this.terminalRef.current) {
       this.terminalRef.current.scrollTop = this.terminalRef.current.scrollHeight;
+      console.log('testbptpt,')
     }
   }
 
@@ -156,7 +168,7 @@ class Terminal extends Component {
   };
 
   render() {
-    const { input, output, inputWidth, username } = this.state;
+    const { input, output, rmWidth, username } = this.state;
 
     return (
       <div ref={this.terminalRef} className='terminal'>
@@ -168,7 +180,7 @@ class Terminal extends Component {
         <div ref={this.promptRef} className="prompt">C:\Users\{username}{'>'}</div>
         <input
           ref={this.inputRef}
-          style={{ width: `calc(100% - ${inputWidth}px)` }}
+          style={{ width: `calc(100% - ${rmWidth}px` }}
           className='input'
           type="text"
           value={input}
@@ -181,19 +193,3 @@ class Terminal extends Component {
 }
 
 export default Terminal;
-{/* <div className="terminal-container">
-        <div className="terminal-prompt">C:\Users\{username}{'>'}</div>
-        <div className="terminal-content">
-          <pre className="terminal-output">{output}</pre>
-          <form onSubmit={this.handleInputSubmit}>
-            <div className="terminal-prompt">{'>'}</div>
-            <input
-              className="terminal-input"
-              type="text"
-              value={input}
-              onChange={this.handleInputChange}
-              autoFocus
-            />
-          </form>
-        </div>
-      </div> */}

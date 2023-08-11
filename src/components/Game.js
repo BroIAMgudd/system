@@ -41,6 +41,10 @@ class Game extends Component {
         });
       });
     }
+
+    setInterval(() => {
+      socket.emit('heartbeat');
+    }, 60000); // Send a heartbeat every 30 seconds  
   }
 
   openClose = (name) => {

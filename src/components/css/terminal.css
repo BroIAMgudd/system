@@ -13,11 +13,8 @@
   height: calc(100% - 40px);
 }
 
-.terminal-output {
-  flex-grow: 1;
-  margin-bottom: 10px;
-  overflow: auto;
-  white-space: pre-wrap;
+td {
+  text-align: center;
 }
 
 .prompt {

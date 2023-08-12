@@ -28,8 +28,7 @@ class Terminal extends Component {
     if (socket) {
       socket.on('setNick', (data) => {
         this.setState({
-          nick: data.nick,
-          path: `C:\\${data.nick}`
+          nick: data.nick
         }, () => {
           this.handleRef();
         });
@@ -105,7 +104,7 @@ class Terminal extends Component {
       "cd",
       "mkdir",
       "bye",
-      "ls",
+      "dir",
       "rm",
       "ul",
       "dl",
@@ -130,6 +129,9 @@ class Terminal extends Component {
           break;
         case 'cd':
           socket.emit('cd', { path: params[0] });
+          break;
+        case 'dir':
+          socket.emit('dir');
           break;
         case 'whois':
           if (this.isValidIPAddress(params[0])) {
@@ -189,12 +191,6 @@ class Terminal extends Component {
   focusInput = () => {
     this.inputRef.current.focus({ preventScroll: true });
   };
-
-  scrollToBottom() {
-    if (this.terminalRef.current) {
-      this.terminalRef.current.scrollTop = this.terminalRef.current.scrollHeight;
-    }
-  }
 
   handleInputChange = (e) => {
     this.setState({ input: e.target.value });

@@ -86,7 +86,7 @@ function parsePath(currentPath, newPath) {
   const isAbsolutePath = newPath.startsWith('C:/');
   
   if (isAbsolutePath) {
-    return newPath;
+    return newPath.replace('C:/', '');
   } else if (newPath.includes('..')) {
     return manipulateDirectory(currentPath, newPath)
   } else {
@@ -237,6 +237,7 @@ io.on('connection', (socket) => {
           system = sysInfo[0];
           socket.emit('receiveUser', { user, system });
           socket.emit('setNick', { nick: system.nick });
+          socket.emit('setPath', { path: `C:\\${system.nick}` });
         }
 
         //If user makes a new windows and logs in remove old socket from userlist and replace with new instance
@@ -268,25 +269,29 @@ io.on('connection', (socket) => {
 
   socket.on('cd', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
-  
-    const { path } = data;
-    const user = usersOnline[socket.id];
-    const currentPath = user.path;
-  
-    // Parse the new path and calculate the updated path
-    const updatedPath = parsePath(currentPath, path.replace('\\', '/'));
+    
+    try {    
+      const { path } = data;
+      const user = usersOnline[socket.id];
+      const currentPath = user.path;
+    
+      // Parse the new path and calculate the updated path
+      const updatedPath = parsePath(currentPath, path.replace(/\\/g, '/').replace(/\/$/, ''));
 
-    if (!updatedPath) { socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${path}` }); return; }
+      if (!updatedPath) { socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${path}` }); return; }
 
-    if (await isValidPath(user.nick, user.ip, updatedPath)) {
-      user.path = updatedPath;
+      if (await isValidPath(user.nick, user.ip, updatedPath)) {
+        user.path = updatedPath;
 
-      socket.emit('setPath', { path: `C:\\${updatedPath.replace(/\//g, '\\')}` });
-      return
-    } else {
-      // Handle invalid path
-      socket.emit('print', { msg: `Invalid path: ${path}` });
-      return;
+        socket.emit('setPath', { path: `C:\\${updatedPath.replace(/\//g, '\\')}` });
+        return
+      } else {
+        // Handle invalid path
+        socket.emit('print', { msg: `Invalid path: ${path}` });
+        return;
+      }
+    } catch (error) {
+      console.error('Get cd Error:', error.message);
     }
   });  
 
@@ -324,15 +329,18 @@ io.on('connection', (socket) => {
 
   socket.on('setNick', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
-
+    
+    const oldNick = usersOnline[socket.id].nick;
     const conn = await pool.getConnection();
 
     await conn.query('UPDATE system SET nick = ? WHERE username = ?', [ data.nick, usersOnline[socket.id].username ]);
+    await conn.query('UPDATE filesystem SET path = REGEXP_REPLACE(path, ?, ?) WHERE path LIKE ?', [ `^${oldNick}`, data.nick, `${oldNick}%` ]);
     conn.release();
 
     usersOnline[socket.id].nick = data.nick;
-
+    usersOnline[socket.id].path = usersOnline[socket.id].path.replace(oldNick, data.nick);
     socket.emit('setNick', { nick: data.nick });
+    socket.emit('setPath', { path: `C:\\${usersOnline[socket.id].path.replace(/\//g, '\\')}` });
   });
 
   socket.on('mkdir', async (data) => {
@@ -349,6 +357,64 @@ io.on('connection', (socket) => {
     conn.release();
 
     socket.emit('print', { msg: `Created new folder: ${data.name}` });
+  });
+
+  socket.on('dir', async () => {
+    try {
+      const user = usersOnline[socket.id];
+      const conn = await pool.getConnection();
+
+      // Fetch the list of files and folders in the current directory
+      const [files] = await conn.query(
+        'SELECT filename, ext, size, modification, version FROM filesystem WHERE ip = ? AND path = ?',
+        [user.ip, user.path]
+      );
+
+      conn.release();
+
+      if (files.length > 0) {
+        const folders = [];
+        const filesList = [];
+
+        // Separate folders and files, format the last modified date
+        files.forEach(file => {
+          const formattedModification = new Date(file.modification).toLocaleString();
+          const entry = {
+            name: file.ext === 'folder' ? file.filename : `${file.filename}.${file.ext}`,
+            type: file.ext === 'folder' ? 'Folder' : 'File',
+            size: file.ext === 'folder' ? '' : file.size,
+            modification: formattedModification,
+            version: file.ext === 'folder' ? '' : `v${file.version}`
+          };
+
+          if (file.ext === 'folder') {
+            folders.push(entry);
+          } else {
+            filesList.push(entry);
+          }
+        });
+
+        // Sort folders and files alphabetically
+        folders.sort((a, b) => a.name.localeCompare(b.name));
+        filesList.sort((a, b) => a.name.localeCompare(b.name));
+
+        const entries = [...folders, ...filesList];
+
+        const tableHeader = '<table><tr><th>Name</th><th>Type</th><th>Size</th><th>Version</th><th>Last Modified</th></tr>';
+        const tableRows = entries.map(entry => {
+          return `<tr><td>${entry.name}</td><td>${entry.type}</td><td>${entry.size}</td><td>${entry.version}</td><td>${entry.modification}</td></tr>`;
+        }).join('');
+        const tableFooter = '</table>';
+
+        const table = tableHeader + tableRows + tableFooter;
+        socket.emit('print', { msg: table });
+      } else {
+        socket.emit('print', { msg: 'No files or folders found in the current directory.' });
+      }
+    } catch (error) {
+      console.error('Error in dir:', error.message);
+      socket.emit('print', { msg: 'An error occurred while listing the directory.' });
+    }
   });
 
   socket.on('touch', async (data) => {

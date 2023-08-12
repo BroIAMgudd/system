@@ -60,7 +60,7 @@ function manipulateDirectory(baseDirectory, manipulationString) {
   for (const folder of manipulationFolders) {
     if (folder === '..') {
       // Go back one folder in the baseFolders array
-      if (baseFolders.length > 1 && baseFolders[baseFolders.length - 1] !== '') {
+      if (baseFolders.length > 1) {
         baseFolders.pop();
       } else {
         return false;
@@ -101,13 +101,15 @@ isValidPath = async (nick, ip, path) => {
   try {
     const parts = path.split('/');
     const lastFolder = parts.pop();
-    const newPath = parts.join('/');
+    let newPath = parts.join('/');
+    if (newPath.endsWith('/')) { newPath = newPath.slice(0, -1); }
 
     const conn = await pool.getConnection();
     const [rows] = await conn.query(
       'SELECT * FROM filesystem WHERE ip = ? AND filename = ? AND ext = ? AND path = ?',
       [ip, lastFolder, 'folder', newPath]
     );
+
     conn.release();
 
     if (rows.length === 1) { return true; } else { return false; }
@@ -274,13 +276,26 @@ io.on('connection', (socket) => {
       const { path } = data;
       const user = usersOnline[socket.id];
       const currentPath = user.path;
+
+      const ip = (user.connTo === '') ? user.ip : user.connTo;
+      var nick = '';
+
+      if (user.connTo !== '') {
+        const conn = await pool.getConnection();
+        const [sysInfo] = await conn.query('SELECT nick FROM system WHERE ip = ?', [ip]);
+        conn.release();
+
+        nick = sysInfo[0].nick;
+      } else {
+        nick = user.nick;
+      }
     
       // Parse the new path and calculate the updated path
-      const updatedPath = parsePath(currentPath, path.replace(/\\/g, '/').replace(/\/$/, ''));
+      const updatedPath = parsePath(currentPath, path.replace(/\\/g, '/').replace(/^\//, '').replace(/\/$/, ''));
 
       if (!updatedPath) { socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${path}` }); return; }
 
-      if (await isValidPath(user.nick, user.ip, updatedPath)) {
+      if (await isValidPath(nick, ip, updatedPath)) {
         user.path = updatedPath;
 
         socket.emit('setPath', { path: `C:\\${updatedPath.replace(/\//g, '\\')}` });
@@ -295,9 +310,69 @@ io.on('connection', (socket) => {
     }
   });  
 
+  socket.on('ssh', async (data) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+
+    const { targetIp } = data;
+
+    
+
+    if (!isValidIPAddress(targetIp)) { socket.emit('print', { msg: 'Invalid target IP address.' }); return; }
+
+    try {
+      const user = usersOnline[socket.id];
+
+      if (targetIp === user.ip) {
+        socket.emit('print', { msg: "Why travel far when you're already here?" });
+        return;
+      }
+
+      const conn = await pool.getConnection();
+
+      // Fetch the target user's information
+      const [targetUser] = await conn.query( 'SELECT nick FROM system WHERE ip = ?', 
+        [targetIp]
+      );
+
+      if (targetUser.length === 1) {
+        const { nick } = targetUser[0];
+        user.connTo = targetIp; // Update the connection info
+
+        // Update the user's path to the root path of the connected target
+        user.path = nick;
+        socket.emit('setPath', { path: `C:\\${nick}` });
+
+        socket.emit('print', { msg: `Connected to IP: ${targetIp}` });
+      } else {
+        socket.emit('print', { msg: `Target IP not found: ${targetIp}` });
+      }
+
+      conn.release();
+    } catch (error) {
+      console.error('Error in ssh:', error.message);
+      socket.emit('print', { msg: 'An error occurred while connecting.' });
+    }
+  });
+
+  socket.on('exit', () => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+
+    const user = usersOnline[socket.id];
+    if (user.connTo === '') {
+      socket.emit('print', { msg: "There's no place like 127.0.0.1" });
+      return;
+    }
+    user.connTo = ''; // Clear the connection info
+    user.path = user.nick; // Reset the path to the user's root path
+    socket.emit('setPath', { path: `C:\\${user.nick}` });
+
+    socket.emit('print', { msg: 'Disconnected.' });
+  });
+
   socket.on('whois', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
     const { ip } = data;
+
     if (!isValidIPAddress(ip)) { socket.emit('print', { msg: 'wtf dude stop sending manual requests' }); return; }
     
     try {
@@ -330,26 +405,32 @@ io.on('connection', (socket) => {
   socket.on('setNick', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
     
-    const oldNick = usersOnline[socket.id].nick;
+    const user = usersOnline[socket.id];
+    const oldNick = user.nick;
     const conn = await pool.getConnection();
 
-    await conn.query('UPDATE system SET nick = ? WHERE username = ?', [ data.nick, usersOnline[socket.id].username ]);
+    await conn.query('UPDATE system SET nick = ? WHERE username = ?', [ data.nick, user.username ]);
     await conn.query('UPDATE filesystem SET path = REGEXP_REPLACE(path, ?, ?) WHERE path LIKE ?', [ `^${oldNick}`, data.nick, `${oldNick}%` ]);
     conn.release();
 
-    usersOnline[socket.id].nick = data.nick;
-    usersOnline[socket.id].path = usersOnline[socket.id].path.replace(oldNick, data.nick);
+    user.nick = data.nick;
+    user.path = user.path.replace(oldNick, data.nick);
     socket.emit('setNick', { nick: data.nick });
-    socket.emit('setPath', { path: `C:\\${usersOnline[socket.id].path.replace(/\//g, '\\')}` });
+    if (user.connTo === '') {
+      socket.emit('setPath', { path: `C:\\${user.path.replace(/\//g, '\\')}` });
+    }
   });
 
   socket.on('mkdir', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+    
     const user = usersOnline[socket.id];
+    const ip = (user.connTo === '') ? user.ip : user.connTo;
     const conn = await pool.getConnection();
+    
     await conn.query('INSERT INTO filesystem (owner, ip, filename, ext, path) VALUES (?, ?, ?, ?, ?)', [
       user.username,
-      user.ip,
+      ip,
       data.name,
       'folder',
       user.path
@@ -362,12 +443,13 @@ io.on('connection', (socket) => {
   socket.on('dir', async () => {
     try {
       const user = usersOnline[socket.id];
+      const ip = (user.connTo === '') ? user.ip : user.connTo;
       const conn = await pool.getConnection();
 
       // Fetch the list of files and folders in the current directory
       const [files] = await conn.query(
-        'SELECT filename, ext, size, modification, version FROM filesystem WHERE ip = ? AND path = ?',
-        [user.ip, user.path]
+        'SELECT id, filename, ext, size, modification, version FROM filesystem WHERE ip = ? AND path = ?',
+        [ip, user.path]
       );
 
       conn.release();
@@ -380,6 +462,7 @@ io.on('connection', (socket) => {
         files.forEach(file => {
           const formattedModification = new Date(file.modification).toLocaleString();
           const entry = {
+            id: file.id,
             name: file.ext === 'folder' ? file.filename : `${file.filename}.${file.ext}`,
             type: file.ext === 'folder' ? 'Folder' : 'File',
             size: file.ext === 'folder' ? '' : file.size,
@@ -400,9 +483,9 @@ io.on('connection', (socket) => {
 
         const entries = [...folders, ...filesList];
 
-        const tableHeader = '<table><tr><th>Name</th><th>Type</th><th>Size</th><th>Version</th><th>Last Modified</th></tr>';
+        const tableHeader = '<table><tr><th>ID</th><th>Name</th><th>Type</th><th>Size</th><th>Version</th><th>Last Modified</th></tr>';
         const tableRows = entries.map(entry => {
-          return `<tr><td>${entry.name}</td><td>${entry.type}</td><td>${entry.size}</td><td>${entry.version}</td><td>${entry.modification}</td></tr>`;
+          return `<tr><td>${entry.id}</td><td>${entry.name}</td><td>${entry.type}</td><td>${entry.size}</td><td>${entry.version}</td><td>${entry.modification}</td></tr>`;
         }).join('');
         const tableFooter = '</table>';
 
@@ -419,11 +502,14 @@ io.on('connection', (socket) => {
 
   socket.on('touch', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+
     const user = usersOnline[socket.id];
+    const ip = (user.connTo === '') ? user.ip : user.connTo;
     const conn = await pool.getConnection();
+
     await conn.query('INSERT INTO filesystem (owner, ip, filename, ext, path) VALUES (?, ?, ?, ?, ?)', [
       user.username,
-      user.ip,
+      ip,
       data.name,
       'txt',
       user.path,
@@ -432,6 +518,83 @@ io.on('connection', (socket) => {
 
     socket.emit('print', { msg: `Created new file: ${data.name}.txt` });
   });
+
+  socket.on('ul', async (data) => {
+    const { ip, connTo, path } = usersOnline[socket.id];
+    const { fileInfo, type } = data;
+  
+    if (!connTo) {
+      socket.emit('print', { msg: 'You need to be currently connected to someone.' });
+      return;
+    }
+  
+    const conn = await pool.getConnection();
+    let file;
+
+    try {
+      if (type === 'id') {
+        // Search for file by id
+        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND id = ?', [ip, parseInt(fileInfo)]);
+        file = rows[0];
+      } else {
+        // Search for file by name
+        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [ip, fileInfo]);
+        if (rows.length > 1) {
+          // Handle multiple files with the same name
+          socket.emit('print', { msg: 'Multiple files with the same name found. Specify by ID.' });
+          conn.release();
+          return;
+        }
+        file = rows[0];
+      }
+
+      if (!file) {
+        socket.emit('print', { msg: 'File not found.' });
+        conn.release();
+        return;
+      }
+      
+      if (file.ext === 'folder') {
+        const [folderDup] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [connTo, file.filename]);
+        console.log(connTo, file.filename, path);
+        if (folderDup.length > 0) {
+          socket.emit('print', { msg: 'Folder with same name already exists.' });
+          conn.release();
+          return;
+        }
+
+        await conn.query(
+          'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [file.status, file.owner, connTo, file.filename, file.ext, file.contents, file.size, path, file.permission, file.version]
+        );
+          
+        const [folderContents] = await conn.query(
+          'SELECT * FROM filesystem WHERE ip = ? AND path = ?',
+          [ip, `${file.path}/${file.filename}`]
+        );
+
+        folderContents.forEach(async item => {
+          await conn.query(
+            'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [item.status, item.owner, connTo, item.filename, item.ext, item.contents, item.size, `${path}/${file.filename}`, item.permission, item.version]
+          );
+        });
+      } else {
+        // Insert file details on their IP
+        await conn.query(
+          'INSERT INTO filesystem (status, owner, ip, filename, ext, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [file.status, file.owner, connTo, file.filename, file.ext, file.size, path, file.permission, file.version]
+        );
+      }
+  
+      socket.emit('print', { msg: 'File transferred.' });
+    } catch (error) {
+      console.error('Upload Error:', error.message);
+      socket.emit('print', { msg: 'An error occurred during file upload.' });
+    } finally {
+      conn.release();
+    }
+  });  
 
   socket.on('test', async (data) => {
     socket.emit('testFinish', { test: data.test });
@@ -471,7 +634,6 @@ setInterval(() => {
   Object.keys(usersOnline).forEach(socketId => {
     const user = usersOnline[socketId];
     if (now - user.lastHeartbeat > 60000) { // Consider socket offline if no heartbeat in the last 60 seconds
-      console.log('Socket offline:', socketId);
       delete usersOnline[socketId];
     }
   });

@@ -55,8 +55,7 @@ class Terminal extends Component {
           Cpu: ${cpu} kHz<br>
           Ram: ${ram} bytes <br>
           Disk Space: ${harddrive} MB<br>
-          Time played: ${uptime} sec<br>
-          <br>`
+          Time played: ${uptime} sec`
         );
       
         this.print(text);
@@ -99,15 +98,17 @@ class Terminal extends Component {
     const cmdList = [
       "clear",
       "whois",
-      "connect",
+      "ssh",
       "setnick",
       "cd",
       "mkdir",
-      "bye",
+      "exit",
       "dir",
       "rm",
       "ul",
+      "ulid",
       "dl",
+      "dlid",
       "say",
       "install",
       "recovery",
@@ -122,7 +123,7 @@ class Terminal extends Component {
     if (cmdList.includes(command)) {
       switch (command) {
         case 'say':
-          this.print(`${params.join(' ')} <br><br>`);
+          this.print(`${params.join(' ')}`);
           break;
         case 'clear':
           this.setState({ output: [] });
@@ -133,12 +134,36 @@ class Terminal extends Component {
         case 'dir':
           socket.emit('dir');
           break;
+        case 'ul':
+          if (params[0]) {
+            socket.emit('ul', { fileInfo: params[0], type: 'name' });
+          } else {
+            this.print('You need to provide a file name');
+          }
+          break;
+        case 'ulid':
+          if (params[0]) {
+            socket.emit('ul', { fileInfo: params[0], type: 'id' });
+          } else {
+            this.print('You need to provide a file id');
+          }
+          break;
         case 'whois':
           if (this.isValidIPAddress(params[0])) {
             socket.emit('whois', { ip: params[0] });
           } else {
             this.print(`Invalid IP Address: ${params[0]}`);
           }
+          break;
+        case 'ssh':
+          if (this.isValidIPAddress(params[0])) {
+            socket.emit('ssh', { targetIp: params[0] });
+          } else {
+            this.print(`Invalid target IP Address: ${params[0]}`);
+          }
+          break;
+        case 'exit':
+          socket.emit('exit');
           break;
         case 'mkdir':
           socket.emit('mkdir', { name: params[0] });
@@ -160,7 +185,7 @@ class Terminal extends Component {
           this.print(`I have not implemented: ${command}`);
       }
     } else {
-      this.print(`Unknown command: ${command}<br><br>`);
+      this.print(`Unknown command: ${command}`);
     }
   };
 

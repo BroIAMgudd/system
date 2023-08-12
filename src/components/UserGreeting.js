@@ -27,7 +27,7 @@ class UserGreeting extends Component {
 
   handleLogToggle = (data) => {
     const { message, id, username } = data;
-    console.log(message);
+    
     this.setState({
       isLoggedIn: !this.state.isLoggedIn,
       id: id,

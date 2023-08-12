@@ -51,6 +51,72 @@ function formatTimestamp(timestamp) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+function manipulateDirectory(baseDirectory, manipulationString) {
+  // Split the baseDirectory and manipulationString into arrays of folder names
+  const baseFolders = baseDirectory.split('/');
+  const manipulationFolders = manipulationString.split('/');
+
+  // Process the manipulationFolders array
+  for (const folder of manipulationFolders) {
+    if (folder === '..') {
+      // Go back one folder in the baseFolders array
+      if (baseFolders.length > 1 && baseFolders[baseFolders.length - 1] !== '') {
+        baseFolders.pop();
+      } else {
+        return false;
+      }
+    } else if (folder !== '.') {
+      // Add the folder to the baseFolders array
+      baseFolders.push(folder);
+    }
+  }
+
+  // Construct the final directory string
+  let finalDirectory = baseFolders.join('/');
+
+  // Remove trailing slash if present
+  if (finalDirectory.endsWith('/')) {
+    finalDirectory = finalDirectory.slice(0, -1);
+  }
+
+  return finalDirectory;
+}
+
+function parsePath(currentPath, newPath) {
+  const isAbsolutePath = newPath.startsWith('C:/');
+  
+  if (isAbsolutePath) {
+    return newPath;
+  } else if (newPath.includes('..')) {
+    return manipulateDirectory(currentPath, newPath)
+  } else {
+    // Traverse forward (e.g., 'cd Test' or 'cd Blender\Test')
+    return currentPath + '/' + newPath;
+  }
+}
+
+isValidPath = async (nick, ip, path) => {
+  if (path === nick) { return true; }
+
+  try {
+    const parts = path.split('/');
+    const lastFolder = parts.pop();
+    const newPath = parts.join('/');
+
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      'SELECT * FROM filesystem WHERE ip = ? AND filename = ? AND ext = ? AND path = ?',
+      [ip, lastFolder, 'folder', newPath]
+    );
+    conn.release();
+
+    if (rows.length === 1) { return true; } else { return false; }
+  } catch (error) {
+    console.error('Error in isValidPath:', error.message);
+    return false;
+  }
+}
+
 // WebSocket event handling
 io.on('connection', (socket) => {
   console.log('Socket Online:', socket.id);
@@ -87,24 +153,23 @@ io.on('connection', (socket) => {
         socket.id
       ]);
 
+      const ip = randIP();
       await conn.query('INSERT INTO system (username, nick, ip, cpu, ram, harddrive) VALUES (?, ?, ?, ?, ?, ?)', [
         username,
         username.slice(0, 6),
-        randIP(),
+        ip,
         750,
         2560,
         5
       ]);
 
-      await conn.query('INSERT INTO filesystem (status, owner, filename, ext, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [
-        0,
+      await conn.query('INSERT INTO filesystem (owner, ip, filename, ext, size, path) VALUES (?, ?, ?, ?, ?, ?)', [
         username,
+        ip,
         'netCrawler',
         'wifi',
         1,
-        `C:\\Users\\${username.slice(0, 6)}`,
-        765,
-        'v1.0'
+        username.slice(0, 6)
       ]);
       
       // Release the connection
@@ -187,7 +252,9 @@ io.on('connection', (socket) => {
         usersOnline[socket.id] = {
           id: user.id,
           username: user.username,
+          nick: system.nick,
           ip: system.ip,
+          path: system.nick,
           connTo: '',
           lastHeartbeat: Date.now(),
           uptime: addUpTime
@@ -198,6 +265,30 @@ io.on('connection', (socket) => {
       console.error('Get User Error:', error.message);
     }
   });
+
+  socket.on('cd', async (data) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+  
+    const { path } = data;
+    const user = usersOnline[socket.id];
+    const currentPath = user.path;
+  
+    // Parse the new path and calculate the updated path
+    const updatedPath = parsePath(currentPath, path.replace('\\', '/'));
+
+    if (!updatedPath) { socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${path}` }); return; }
+
+    if (await isValidPath(user.nick, user.ip, updatedPath)) {
+      user.path = updatedPath;
+
+      socket.emit('setPath', { path: `C:\\${updatedPath.replace(/\//g, '\\')}` });
+      return
+    } else {
+      // Handle invalid path
+      socket.emit('print', { msg: `Invalid path: ${path}` });
+      return;
+    }
+  });  
 
   socket.on('whois', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
@@ -239,7 +330,41 @@ io.on('connection', (socket) => {
     await conn.query('UPDATE system SET nick = ? WHERE username = ?', [ data.nick, usersOnline[socket.id].username ]);
     conn.release();
 
+    usersOnline[socket.id].nick = data.nick;
+
     socket.emit('setNick', { nick: data.nick });
+  });
+
+  socket.on('mkdir', async (data) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+    const user = usersOnline[socket.id];
+    const conn = await pool.getConnection();
+    await conn.query('INSERT INTO filesystem (owner, ip, filename, ext, path) VALUES (?, ?, ?, ?, ?)', [
+      user.username,
+      user.ip,
+      data.name,
+      'folder',
+      user.path
+    ]);
+    conn.release();
+
+    socket.emit('print', { msg: `Created new folder: ${data.name}` });
+  });
+
+  socket.on('touch', async (data) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+    const user = usersOnline[socket.id];
+    const conn = await pool.getConnection();
+    await conn.query('INSERT INTO filesystem (owner, ip, filename, ext, path) VALUES (?, ?, ?, ?, ?)', [
+      user.username,
+      user.ip,
+      data.name,
+      'txt',
+      user.path,
+    ]);
+    conn.release();
+
+    socket.emit('print', { msg: `Created new file: ${data.name}.txt` });
   });
 
   socket.on('test', async (data) => {

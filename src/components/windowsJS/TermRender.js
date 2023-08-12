@@ -10,7 +10,9 @@ class Terminal extends Component {
     this.terminalRef = React.createRef();
 
     this.state = {
-      username: 'Anonymous',
+      nick: 'Anon',
+      path: 'C:\\Anon',
+      os: 'windows',
       input: '',
       output: [],
       rmWidth: 0
@@ -26,7 +28,16 @@ class Terminal extends Component {
     if (socket) {
       socket.on('setNick', (data) => {
         this.setState({
-          username: data.nick
+          nick: data.nick,
+          path: `C:\\${data.nick}`
+        }, () => {
+          this.handleRef();
+        });
+      });
+
+      socket.on('setPath', (data) => {
+        this.setState({
+          path: data.path
         }, () => {
           this.handleRef();
         });
@@ -50,7 +61,7 @@ class Terminal extends Component {
         );
       
         this.print(text);
-      });      
+      });
     }
   }
 
@@ -68,15 +79,31 @@ class Terminal extends Component {
   };
 
   processCommand = async (args) => {
+    const { nick, os, path } = this.state;
     const { socket } = this.props;
     const [command, ...params] = args;
-    this.print(`C:\\Users\\${this.state.username}> ${args.join(' ')}`);
+
+    if (os === 'windows') {
+      this.print(`${path}> ${args.join(' ')}`);
+    } else if (os === 'linux'){
+      this.print(`${path.replace('root', `${nick}@linux-desktop:`)}$ ${args.join(' ')}`);
+    } else if (os === 'mac'){
+      if (path === 'root') {
+        this.print(`${nick}@MacBook ~ % ${args.join(' ')}`);
+      } else {
+        const folders = path.split('/'); // Split the path into an array of folders
+        const lastFolder = folders[folders.length - 1];
+        this.print(`${nick}@MacBook ~ ${lastFolder}$ ${args.join(' ')}`);
+      }
+    }
     
     const cmdList = [
       "clear",
       "whois",
       "connect",
       "setnick",
+      "cd",
+      "mkdir",
       "bye",
       "ls",
       "rm",
@@ -92,6 +119,7 @@ class Terminal extends Component {
       "rename",
       "touch"
     ];
+    
     if (cmdList.includes(command)) {
       switch (command) {
         case 'say':
@@ -100,12 +128,18 @@ class Terminal extends Component {
         case 'clear':
           this.setState({ output: [] });
           break;
+        case 'cd':
+          socket.emit('cd', { path: params[0] });
+          break;
         case 'whois':
           if (this.isValidIPAddress(params[0])) {
             socket.emit('whois', { ip: params[0] });
           } else {
             this.print(`Invalid IP Address: ${params[0]}`);
           }
+          break;
+        case 'mkdir':
+          socket.emit('mkdir', { name: params[0] });
           break;
         case 'setnick':
           if (params[0].length > 6 || params[0].length < 3) { 
@@ -159,7 +193,6 @@ class Terminal extends Component {
   scrollToBottom() {
     if (this.terminalRef.current) {
       this.terminalRef.current.scrollTop = this.terminalRef.current.scrollHeight;
-      console.log('testbptpt,')
     }
   }
 
@@ -168,7 +201,7 @@ class Terminal extends Component {
   };
 
   render() {
-    const { input, output, rmWidth, username } = this.state;
+    const { input, output, rmWidth, path } = this.state;
 
     return (
       <div ref={this.terminalRef} className='terminal'>
@@ -177,7 +210,7 @@ class Terminal extends Component {
             <div key={index} className={item.type} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(item.text)}} />
           ))}
         </div>
-        <div ref={this.promptRef} className="prompt">C:\Users\{username}{'>'}</div>
+        <div ref={this.promptRef} className="prompt">{path}{'>'}</div>
         <input
           ref={this.inputRef}
           style={{ width: `calc(100% - ${rmWidth}px` }}

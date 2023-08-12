@@ -17,7 +17,6 @@ class Register extends Component {
   submitRegister = (event) => {
     const { username, email, password } = this.state;
     const { socket } = this.props;
-    console.log(socket);
     
     socket.emit('register', { username, email, password });  
   

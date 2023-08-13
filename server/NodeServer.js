@@ -522,24 +522,15 @@ io.on('connection', (socket) => {
   socket.on('transfer', async (data) => {
     const { ip, connTo, path, nick } = usersOnline[socket.id];
     const { fileInfo, type, search } = data;
-    let sender, receiver, filePath;
 
     if (!connTo) {
       socket.emit('print', { msg: 'You need to be currently connected to someone.' });
       return;
-    } else if (type === 'ul') {
-      // MyIP => File => connTo
-      sender = ip;
-      receiver = connTo;
-      filePath = path;
-    } else {
-      // connTo => File => MyIP
-      sender = connTo;
-      receiver = ip;
-      filePath = nick;
     }
   
     const conn = await pool.getConnection();
+    const sender = (type === 'ul') ? ip : connTo;
+    const receiver = (type === 'ul') ? connTo : ip;
     let file;
 
     try {
@@ -548,8 +539,9 @@ io.on('connection', (socket) => {
         const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND id = ?', [sender, parseInt(fileInfo)]);
         file = rows[0];
       } else {
+        const filePath = (type === 'ul') ? nick : path;
         // Search for file by name
-        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [sender, fileInfo]);
+        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ? AND path = ?', [sender, fileInfo, filePath]);
         if (rows.length > 1) {
           // Handle multiple files with the same name
           socket.emit('print', { msg: 'Multiple files with the same name found. Specify by ID.' });
@@ -566,14 +558,14 @@ io.on('connection', (socket) => {
       }
       
       if (file.ext === 'folder') {
-        const [folderDup] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [receiver, file.filename]);
+        const filePath = (type === 'ul') ? path : nick;
+        const [folderDup] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ? AND path = ?', [receiver, file.filename, filePath]);
 
         if (folderDup.length > 0) {
           socket.emit('print', { msg: 'Folder with same name already exists.' });
           conn.release();
           return;
         }
-
         await conn.query(
           'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [file.status, file.owner, receiver, file.filename, file.ext, file.contents, file.size, filePath, file.permission, file.version]
@@ -583,7 +575,7 @@ io.on('connection', (socket) => {
           'SELECT * FROM filesystem WHERE ip = ? AND path LIKE ?',
           [sender, `${file.path}/${file.filename}%`]
         );
-
+        
         folderContents.forEach(async item => {
           const parts = item.path.split('/');
           parts.shift();
@@ -596,6 +588,7 @@ io.on('connection', (socket) => {
         });
       } else {
         // Insert file details on their IP
+        const filePath = (type === 'ul') ? path : nick;
         await conn.query(
           'INSERT INTO filesystem (status, owner, ip, filename, ext, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [file.status, file.owner, receiver, file.filename, file.ext, file.size, filePath, file.permission, file.version]

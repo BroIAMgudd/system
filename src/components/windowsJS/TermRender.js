@@ -105,10 +105,12 @@ class Terminal extends Component {
       "exit",
       "dir",
       "rm",
+      "rmid",
       "ul",
       "ulid",
       "dl",
       "dlid",
+      "move",
       "say",
       "install",
       "recovery",
@@ -121,68 +123,52 @@ class Terminal extends Component {
     ];
     
     if (cmdList.includes(command)) {
-      switch (command) {
-        case 'say':
-          this.print(`${params.join(' ')}`);
-          break;
-        case 'clear':
-          this.setState({ output: [] });
-          break;
-        case 'cd':
-          socket.emit('cd', { path: params[0] });
-          break;
-        case 'dir':
-          socket.emit('dir');
-          break;
-        case 'ul':
-          if (params[0]) {
-            socket.emit('ul', { fileInfo: params[0], type: 'name' });
-          } else {
-            this.print('You need to provide a file name');
-          }
-          break;
-        case 'ulid':
-          if (params[0]) {
-            socket.emit('ul', { fileInfo: params[0], type: 'id' });
-          } else {
-            this.print('You need to provide a file id');
-          }
-          break;
-        case 'whois':
-          if (this.isValidIPAddress(params[0])) {
-            socket.emit('whois', { ip: params[0] });
-          } else {
-            this.print(`Invalid IP Address: ${params[0]}`);
-          }
-          break;
-        case 'ssh':
-          if (this.isValidIPAddress(params[0])) {
-            socket.emit('ssh', { targetIp: params[0] });
-          } else {
-            this.print(`Invalid target IP Address: ${params[0]}`);
-          }
-          break;
-        case 'exit':
-          socket.emit('exit');
-          break;
-        case 'mkdir':
-          socket.emit('mkdir', { name: params[0] });
-          break;
-        case 'setnick':
-          if (params[0].length > 6 || params[0].length < 3) { 
-            this.print(`Nickname needs to be over 3 characters and less than 6 characters: ${params[0]}<br><br>`)
-          } else {
-            socket.emit('setNick', { nick: params[0] });
-          }
-          break;
-        case 'connect':
-          socket.emit('connect', { ip: params[0] });
-          break;
-        case 'touch':
-          socket.emit('touch', { name: params[0] });
-          break;
-        default:
-          this.print(`I have not implemented: ${command}`);
+      if (command === 'say') {
+        this.print(`${params.join(' ')}`);
+      } else if (command === 'clear') {
+        this.setState({ output: [] });
+      } else if (command === 'cd') {
+        socket.emit('cd', { path: params[0] });
+      } else if (command === 'dir') {
+        socket.emit('dir');
+      } else if (['ul', 'ulid', 'dl', 'dlid', 'rm', 'rmid'].includes(command)) {
+        if (!params[0]) { this.print('Need a little more info bud'); }
+        const type = command.slice(0, 2);
+        const search = command.slice(2);
+        if (type === 'rm') {
+          socket.emit('rm', { fileInfo: params[0], search: search });
+        } else {
+          socket.emit('transfer', { fileInfo: params[0], type: type, search: search });
+        }
+      } else if (command === 'whois') {
+        if (this.isValidIPAddress(params[0])) {
+          socket.emit('whois', { ip: params[0] });
+        } else {
+          this.print(`Invalid IP Address: ${params[0]}`);
+        }
+      } else if (command === 'ssh') {
+        if (this.isValidIPAddress(params[0])) {
+          socket.emit('ssh', { targetIp: params[0] });
+        } else {
+          this.print(`Invalid target IP Address: ${params[0]}`);
+        }
+      } else if (command === 'exit') {
+        socket.emit('exit');
+      } else if (command === 'mkdir') {
+        socket.emit('mkdir', { name: params[0] });
+      } else if (command === 'move') {
+        if (!params[0] || !params[1]) { this.print('Need a little more info bud'); return;}
+        socket.emit('move', { filename: params[0], updatePath: params[1] });
+      } else if (command === 'setnick') {
+        if (params[0].length > 6 || params[0].length < 3) { 
+          this.print(`Nickname needs to be over 3 characters and less than 6 characters: ${params[0]}<br><br>`)
+        } else {
+          socket.emit('setNick', { nick: params[0] });
+        }
+      } else if (command === 'touch') {
+        socket.emit('touch', { name: params[0] });
+      } else {
+        this.print(`I have not implemented: ${command}`);
       }
     } else {
       this.print(`Unknown command: ${command}`);

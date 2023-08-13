@@ -308,7 +308,7 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Get cd Error:', error.message);
     }
-  });  
+  });
 
   socket.on('ssh', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
@@ -519,26 +519,37 @@ io.on('connection', (socket) => {
     socket.emit('print', { msg: `Created new file: ${data.name}.txt` });
   });
 
-  socket.on('ul', async (data) => {
-    const { ip, connTo, path } = usersOnline[socket.id];
-    const { fileInfo, type } = data;
-  
+  socket.on('transfer', async (data) => {
+    const { ip, connTo, path, nick } = usersOnline[socket.id];
+    const { fileInfo, type, search } = data;
+    let sender, receiver, filePath;
+
     if (!connTo) {
       socket.emit('print', { msg: 'You need to be currently connected to someone.' });
       return;
+    } else if (type === 'ul') {
+      // MyIP => File => connTo
+      sender = ip;
+      receiver = connTo;
+      filePath = path;
+    } else {
+      // connTo => File => MyIP
+      sender = connTo;
+      receiver = ip;
+      filePath = nick;
     }
   
     const conn = await pool.getConnection();
     let file;
 
     try {
-      if (type === 'id') {
+      if (search === 'id') {
         // Search for file by id
-        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND id = ?', [ip, parseInt(fileInfo)]);
+        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND id = ?', [sender, parseInt(fileInfo)]);
         file = rows[0];
       } else {
         // Search for file by name
-        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [ip, fileInfo]);
+        const [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [sender, fileInfo]);
         if (rows.length > 1) {
           // Handle multiple files with the same name
           socket.emit('print', { msg: 'Multiple files with the same name found. Specify by ID.' });
@@ -555,8 +566,8 @@ io.on('connection', (socket) => {
       }
       
       if (file.ext === 'folder') {
-        const [folderDup] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [connTo, file.filename]);
-        console.log(connTo, file.filename, path);
+        const [folderDup] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ?', [receiver, file.filename]);
+
         if (folderDup.length > 0) {
           socket.emit('print', { msg: 'Folder with same name already exists.' });
           conn.release();
@@ -565,25 +576,25 @@ io.on('connection', (socket) => {
 
         await conn.query(
           'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [file.status, file.owner, connTo, file.filename, file.ext, file.contents, file.size, path, file.permission, file.version]
+          [file.status, file.owner, receiver, file.filename, file.ext, file.contents, file.size, filePath, file.permission, file.version]
         );
           
         const [folderContents] = await conn.query(
           'SELECT * FROM filesystem WHERE ip = ? AND path = ?',
-          [ip, `${file.path}/${file.filename}`]
+          [sender, `${file.path}/${file.filename}`]
         );
 
         folderContents.forEach(async item => {
           await conn.query(
             'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [item.status, item.owner, connTo, item.filename, item.ext, item.contents, item.size, `${path}/${file.filename}`, item.permission, item.version]
+            [item.status, item.owner, receiver, item.filename, item.ext, item.contents, item.size, `${filePath}/${file.filename}`, item.permission, item.version]
           );
         });
       } else {
         // Insert file details on their IP
         await conn.query(
           'INSERT INTO filesystem (status, owner, ip, filename, ext, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [file.status, file.owner, connTo, file.filename, file.ext, file.size, path, file.permission, file.version]
+          [file.status, file.owner, receiver, file.filename, file.ext, file.size, filePath, file.permission, file.version]
         );
       }
   
@@ -591,6 +602,104 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Upload Error:', error.message);
       socket.emit('print', { msg: 'An error occurred during file upload.' });
+    } finally {
+      conn.release();
+    }
+  });
+
+  socket.on('rm', async (data) => {
+    const { ip, connTo, path } = usersOnline[socket.id];
+    let { fileInfo, search } = data;
+    
+    const targetIp = (connTo === '') ? ip : connTo;
+    
+    const conn = await pool.getConnection();
+  
+    try {
+      if (search === 'id') {
+        // Search for file by id
+        const [rows] = await conn.query('SELECT filename, ext FROM filesystem WHERE ip = ? AND id = ?', [targetIp, parseInt(fileInfo)]);
+        var file = rows[0];
+  
+        if (!file) {
+          socket.emit('print', { msg: 'File not found.' });
+          conn.release();
+          return;
+        }
+        
+        await conn.query('DELETE FROM filesystem WHERE ip = ? AND id = ?', [targetIp, parseInt(fileInfo)]);
+        socket.emit('print', { msg: `File removed: ${file.filename}` });
+      } else {
+        // Search for file by name
+        const [rows] = await conn.query('SELECT filename, ext FROM filesystem WHERE ip = ? AND filename = ?', [targetIp, fileInfo]);
+        var file = rows[0];
+  
+        if (!file) {
+          socket.emit('print', { msg: 'File not found.' });
+          conn.release();
+          return;
+        }
+        
+        await conn.query('DELETE FROM filesystem WHERE ip = ? AND filename = ?', [targetIp, fileInfo]);
+        socket.emit('print', { msg: `File removed: ${file.filename}` });
+      }
+
+      if (file.ext === 'folder') {
+        await conn.query('DELETE FROM filesystem WHERE ip = ? AND path LIKE ?', [targetIp, `${path}/${file.filename}%`]);
+      }
+    } catch (error) {
+      console.error('Remove Error:', error.message);
+      socket.emit('print', { msg: 'An error occurred while removing the file.' });
+    } finally {
+      conn.release();
+    }
+  });
+
+  socket.on('move', async (data) => {
+    const { filename, updatePath } = data;
+    const { ip, connTo, path, nick } = usersOnline[socket.id];
+    const targetip = (connTo === '') ? ip : connTo;
+    let targetnick;
+    const conn = await pool.getConnection();
+
+    try {
+      if (connTo !== '') {
+        const [row] = await conn.query('SELECT nick FROM system WHERE ip = ?', [ip]);
+        targetnick = row.nick;
+      } else {
+        targetnick = nick;
+      }
+    
+      const [currentPathRow] = await conn.query('SELECT ext FROM filesystem WHERE filename = ? AND ip = ? AND path = ?', [filename, targetip, path]);
+      const fileType = currentPathRow[0].ext;
+    
+      const newPath = parsePath(
+        path,
+        updatePath.replace(/\\/g, '/').replace(/^\//, '').replace(/\/$/, '')
+      );
+
+      console.log(newPath);
+    
+      if (!newPath) {
+        socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${updatePath}` });
+        return;
+      }
+    
+      if (await isValidPath(targetnick, targetip, newPath)) {
+        await conn.query('UPDATE filesystem SET path = ? WHERE filename = ? AND ip = ?', [newPath, filename, targetip]);
+        if (fileType === 'folder') {
+          await conn.query('UPDATE filesystem SET path = ? WHERE ip = ? AND path LIKE ?', [`${newPath}/${filename}`, targetip, `${path}/${filename}%`]);
+          socket.emit('print', { msg: `Moved folder ${filename}` });
+        } else {
+          socket.emit('print', { msg: `Moved file ${filename}` });
+        }
+      } else {
+        // Handle invalid path
+        socket.emit('print', { msg: `Invalid path: ${path}` });
+      }
+    } catch (error) {
+      console.error('Move Error:', error.message);
+      socket.emit('print', { msg: 'An error occurred while move the file.' });
     } finally {
       conn.release();
     }

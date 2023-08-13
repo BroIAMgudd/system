@@ -115,7 +115,6 @@ class Terminal extends Component {
       "install",
       "recovery",
       "mine",
-      "whois",
       "format",
       "grep",
       "rename",

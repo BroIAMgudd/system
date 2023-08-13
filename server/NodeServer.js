@@ -500,6 +500,27 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('message', async (msg) => {
+    if (!usersOnline[socket.id]) { socket.disconnect(); return; }
+
+    const user = usersOnline[socket.id];
+    const conn = await pool.getConnection();
+    
+    try {
+      await conn.query('INSERT INTO messages (username, message) VALUES (?, ?)', [
+        user.username,
+        msg
+      ]);
+    } catch (error) {
+      console.error('Message Error:', error.message);
+      socket.emit('print', { msg: 'An error occurred during messaging' });
+    } finally {
+      conn.release();
+    }
+
+    io.emit('message', { message: msg });
+  });
+
   socket.on('touch', async (data) => {
     if (!usersOnline[socket.id]) { socket.disconnect(); return; }
 
@@ -628,16 +649,20 @@ io.on('connection', (socket) => {
         socket.emit('print', { msg: `File removed: ${file.filename}` });
       } else {
         // Search for file by name
-        const [rows] = await conn.query('SELECT filename, ext FROM filesystem WHERE ip = ? AND filename = ?', [targetIp, fileInfo]);
+        const [rows] = await conn.query('SELECT filename, ext FROM filesystem WHERE ip = ? AND filename = ? AND path = ?', [targetIp, fileInfo, path]);
         var file = rows[0];
   
         if (!file) {
           socket.emit('print', { msg: 'File not found.' });
           conn.release();
           return;
+        } if (rows.length > 1) {
+          socket.emit('print', { msg: 'Multiple files found with that name use rmid instead.' });
+          conn.release();
+          return;
         }
         
-        await conn.query('DELETE FROM filesystem WHERE ip = ? AND filename = ?', [targetIp, fileInfo]);
+        await conn.query('DELETE FROM filesystem WHERE ip = ? AND filename = ? AND path = ?', [targetIp, fileInfo, path]);
         socket.emit('print', { msg: `File removed: ${file.filename}` });
       }
 

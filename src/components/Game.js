@@ -14,9 +14,10 @@ class Game extends Component {
       harddrive: 5.00,
       usb: 5.00,
       winRender: {
-        term: true,
+        term: false,
         task: false,
-        log: false
+        log: false,
+        chat: true
       }
     }
   }
@@ -61,6 +62,7 @@ class Game extends Component {
         {this.state.winRender.term ? <DragComp name='Terminal' short='term' openClose={this.openClose} socket={this.props.socket}/> : null}
         {this.state.winRender.task ? <DragComp name='Task Manager' short='task' openClose={this.openClose}/> : null}
         {this.state.winRender.log ? <DragComp name='Log Manager' short='log' openClose={this.openClose}/> : null}
+        {this.state.winRender.chat ? <DragComp name='Global Chat' short='chat' openClose={this.openClose} socket={this.props.socket}/> : null}
       </>
     )
   }

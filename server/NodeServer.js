@@ -578,16 +578,20 @@ io.on('connection', (socket) => {
           'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [file.status, file.owner, receiver, file.filename, file.ext, file.contents, file.size, filePath, file.permission, file.version]
         );
-          
+        
         const [folderContents] = await conn.query(
-          'SELECT * FROM filesystem WHERE ip = ? AND path = ?',
-          [sender, `${file.path}/${file.filename}`]
+          'SELECT * FROM filesystem WHERE ip = ? AND path LIKE ?',
+          [sender, `${file.path}/${file.filename}%`]
         );
 
         folderContents.forEach(async item => {
+          const parts = item.path.split('/');
+          parts.shift();
+          const itemPath = parts.join('/');
+
           await conn.query(
             'INSERT INTO filesystem (status, owner, ip, filename, ext, contents, size, path, permission, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [item.status, item.owner, receiver, item.filename, item.ext, item.contents, item.size, `${filePath}/${file.filename}`, item.permission, item.version]
+            [item.status, item.owner, receiver, item.filename, item.ext, item.contents, item.size, `${filePath}/${itemPath}`, item.permission, item.version]
           );
         });
       } else {
@@ -677,8 +681,6 @@ io.on('connection', (socket) => {
         path,
         updatePath.replace(/\\/g, '/').replace(/^\//, '').replace(/\/$/, '')
       );
-
-      console.log(newPath);
     
       if (!newPath) {
         socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${updatePath}` });

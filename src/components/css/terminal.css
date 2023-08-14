@@ -13,6 +13,10 @@
   height: calc(100% - 40px);
 }
 
+table {
+  width: 100%;
+}
+
 td {
   text-align: center;
 }

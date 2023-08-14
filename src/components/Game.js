@@ -14,10 +14,10 @@ class Game extends Component {
       harddrive: 5.00,
       usb: 5.00,
       winRender: {
-        term: false,
+        term: true,
         task: false,
         log: false,
-        chat: true
+        chat: false
       }
     }
   }

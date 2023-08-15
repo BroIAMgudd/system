@@ -16,7 +16,7 @@ module.exports = function (socket, usersOnline) {
       try {
         localLogs = await listLogs(conn, ip);
         localLogs.forEach(row => {
-          logs.push({
+          logs.unshift({
             id: row.id,
             actionType: row.actionType,
             extraDetails: row.extraDetails,

@@ -20,6 +20,7 @@ const registerHandler = require('./socketHandlers/register');
 const loginHandler = require('./socketHandlers/login');
 const getUserHandler = require('./socketHandlers/getUser');
 const loadLocalLogsHandler = require('./socketHandlers/loadLocalLogs');
+const removeLogHandler = require('./socketHandlers/rmLog');
 const sshHandler = require('./socketHandlers/ssh');
 const cdHandler = require('./socketHandlers/changeDir');
 const exitHandler = require('./socketHandlers/exit');
@@ -43,6 +44,7 @@ io.on('connection', (socket) => {
   loginHandler(socket);
   getUserHandler(socket, usersOnline);
   loadLocalLogsHandler(socket, usersOnline);
+  removeLogHandler(io, socket, usersOnline);
   sshHandler(io, socket, usersOnline);
   cdHandler(socket, usersOnline);
   exitHandler(socket, usersOnline);

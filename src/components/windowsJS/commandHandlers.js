@@ -125,18 +125,6 @@ export const printHandler = (socket, print) => {
   });
 };
 
-export const localLogsHandler = (socket, print) => {
-  socket.on('localLogUpdate', (data) => {
-    console.log('localLogUpdate', data);
-  });
-};
-
-export const remoteLogsHandler = (socket, print) => {
-  socket.on('remoteLogUpdate', (data) => {
-    console.log('remoteLogUpdate', data);
-  });
-};
-
 export const whoisHandler = (socket, print) => {
   socket.on('whois', (data) => {
     const { username, cpu, ram, netName, harddrive, uptime } = data;

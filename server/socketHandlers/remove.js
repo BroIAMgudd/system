@@ -10,9 +10,7 @@ module.exports = function (socket, usersOnline) {
     const conn = await pool.getConnection();
   
     try {
-      console.log(parseInt(fileInfo), fileInfo);
       if (search === 'id') {
-        console.log(parseInt(fileInfo), fileInfo);
         // Search for file by id
         const [rows] = await conn.query('SELECT filename, ext FROM filesystem WHERE ip = ? AND id = ?', [targetIp, parseInt(fileInfo)]);
         var file = rows[0];
@@ -22,7 +20,7 @@ module.exports = function (socket, usersOnline) {
           conn.release();
           return;
         }
-        console.log(parseInt(fileInfo), fileInfo);
+        
         await conn.query('DELETE FROM filesystem WHERE ip = ? AND id = ?', [targetIp, parseInt(fileInfo)]);
         socket.emit('print', { msg: `File removed: ${file.filename}` });
       } else {

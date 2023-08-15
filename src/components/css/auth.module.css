@@ -3,10 +3,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "segoe ui", roboto, oxygen, ubuntu, cantarell, "fira sans", "droid sans", "helvetica neue", Arial, sans-serif;
 }
 
-*, *:before, *:after {
-  box-sizing: inherit;
-}
-
 body {
   background-color: #1a1a1a; /* Dark background color */
 }

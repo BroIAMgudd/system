@@ -102,7 +102,7 @@ async function fetchFileSystemRows(conn, ip, lastFolder, newPath) {
   return rows;
 }
 
-async function addLog(targetIP, loggedIP, actionType, extraDetails) {
+async function addLog(targetIP, loggedIP, actionType, extraDetails, usersOnline, io) {
   // Usage example addLog('remote', '192.168.1.2', '127.0.0.1', 'upload', 'File.txt');
   try {
     const conn = await pool.getConnection();
@@ -110,7 +110,27 @@ async function addLog(targetIP, loggedIP, actionType, extraDetails) {
       const query = 'INSERT INTO logs (targetIP, loggedIP, actionType, extraDetails) VALUES (?, ?, ?, ?)';
       const values = [targetIP, loggedIP, actionType, extraDetails];
 
-      await conn.query(query, values);
+      const [row] = await conn.query(query, values);
+
+      const log = {
+        id: row.insertId,
+        actionType: actionType,
+        extraDetails: extraDetails,
+        loggedIP: loggedIP,
+        timestamp: formatTimestamp(Date.now())
+      }
+
+      for (const socketID in usersOnline) {
+        const newUser = usersOnline[socketID];
+
+        if (newUser.ip === targetIP) {
+          io.to(socketID).emit('localLogUpdate', log);
+        }
+        
+        if (newUser.connTo === targetIP) {
+          io.to(socketID).emit('remoteLogUpdate', log);
+        }
+      };
     } finally {
       conn.release();
     }

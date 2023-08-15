@@ -32,52 +32,22 @@ module.exports = function (io, socket, usersOnline) {
           user.path = nick; // Update the user's path to the root of the connected target
           const auth = 'Authentication'
           //           targetIP, loggedIP, actionType, extraDetails
-          const localLogResult = await addLog(targetIp, user.ip, auth, null);
-          const remoteLogResult = await addLog(user.ip, targetIp, auth, null);
-          console.log(localLogResult);
+          await addLog(targetIp, user.ip, auth, null, usersOnline, io);
+          await addLog(user.ip, targetIp, auth, null, usersOnline, io);
 
-          for (const socketID in usersOnline) {
-            const newUser = usersOnline[socketID];
-            let localLogs, remoteLogs;
+          const remoteLogs = await listLogs(conn, targetIp);
+          let logs = [];
+          remoteLogs.forEach(row => {
+            logs.unshift({
+              id: row.id,
+              actionType: row.actionType,
+              extraDetails: row.extraDetails,
+              loggedIP: row.loggedIP,
+              timestamp: formatTimestamp(row.timestamp),
+            });
+          });
+          socket.emit('remoteLogListUpdate', logs);
 
-            if (socketID === socket.id) {
-              remoteLogs = await listLogs(conn, targetIp);
-              localLogs = await listLogs(conn, user.ip);
-            } else if (newUser.ip === targetIp) {
-              localLogs = await listLogs(conn, user.ip);
-            } else if (newUser.connTo === user.ip || newUser.connTo === targetIp) {
-              remoteLogs = await listLogs(conn, newUser.connTo);
-            }
-
-            if (localLogs) {
-              let logs = [];
-              localLogs.forEach(row => {
-                logs.push({
-                  id: row.id,
-                  actionType: row.actionType,
-                  extraDetails: row.extraDetails,
-                  loggedIP: row.loggedIP,
-                  timestamp: formatTimestamp(row.timestamp),
-                });
-              });
-              io.to(socketID).emit('localLogListUpdate', logs);
-            }
-
-            if (remoteLogs) {
-              let logs = [];
-              remoteLogs.forEach(row => {
-                logs.push({
-                  id: row.id,
-                  actionType: row.actionType,
-                  extraDetails: row.extraDetails,
-                  loggedIP: row.loggedIP,
-                  timestamp: formatTimestamp(row.timestamp),
-                });
-              });
-              io.to(socketID).emit('remoteLogListUpdate', logs);
-            }
-          }
-          
           socket.emit('setPath', { path: `C:\\${nick}` });
           socket.emit('print', { msg: `Connected to IP: ${targetIp}` });
         } else {

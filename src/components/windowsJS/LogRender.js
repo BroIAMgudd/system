@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import '../css/logs.css'
 import {
   localLogListUpdate,
   remoteLogListUpdate,
@@ -27,28 +28,9 @@ class LogViewer extends Component {
     });
   }
 
-  // Handle localLogListUpdate event
-  handleLocalLogListUpdate = (logs) => {
-    this.setState({ localLogs: logs });
-  };
-
-  // Handle remoteLogListUpdate event
-  handleRemoteLogListUpdate = (logs) => {
-    this.setState({ remoteLogs: logs });
-  };
-
-  // Handle LocalLogUpdate event
-  handleLocalLogUpdate = (log) => {
-    this.setState((prevState) => ({
-      localLogs: [log, ...prevState.localLogs]
-    }));
-  };
-
-  // Handle remotelLogUpdate event
-  handleRemoteLogUpdate = (log) => {
-    this.setState((prevState) => ({
-      remoteLogs: [log, ...prevState.remoteLogs]
-    }));
+  handleDeleteLog = (id) => {
+    const { socket } = this.props;
+    socket.emit('deleteLog', id);
   };
 
   render() {
@@ -56,31 +38,38 @@ class LogViewer extends Component {
 
     return (
       <div>
-        <h2>Local Logs</h2>
-        <ul>
-          {localLogs.map((log, index) => (
-            <li key={log.id}>
-              <strong>Log {index + 1}</strong><br />
-              Target IP: {log.targetIP}<br />
-              Logged IP: {log.loggedIP}<br />
-              Action Type: {log.actionType}<br />
-              Extra Details: {log.extraDetails || 'N/A'}
-            </li>
-          ))}
-        </ul>
-
-        <h2>Remote Logs</h2>
-        <ul>
-          {remoteLogs.map((log, index) => (
-            <li key={log.id}>
-              <strong>Log {index + 1}</strong><br />
-              Target IP: {log.targetIP}<br />
-              Logged IP: {log.loggedIP}<br />
-              Action Type: {log.actionType}<br />
-              Extra Details: {log.extraDetails || 'N/A'}
-            </li>
-          ))}
-        </ul>
+        <div className="log-list">
+          <div className="log-item">
+          <div className="log-title">Remote Logs</div>
+            {remoteLogs.map((log, index) => (
+              <div key={log.id}
+              className='remote'>
+                <i className="fa-solid fa-wifi fa-xs"></i>
+                <i className="fa-solid fa-xmark delete" onClick={() => this.handleDeleteLog(log.id)}></i>
+                <strong>&nbsp;{log.actionType}</strong>: {log.extraDetails || ''}<br/>
+                <i class="fa-solid fa-arrow-right-to-bracket fa-xs"></i>
+                &nbsp;{log.loggedIP}<br/>
+                <i class="fa-solid fa-clock fa-xs"></i>
+                &nbsp;{log.timestamp}<br/>
+              </div>
+            ))}
+          </div>
+          <div className="log-item">
+            <div className="log-title">Local Logs</div>
+            {localLogs.map((log) => (
+              <div key={log.id}
+              className='local'>
+                <i className="fa-solid fa-wifi fa-xs"></i>
+                <i className="fa-solid fa-xmark delete" onClick={() => this.handleDeleteLog(log.id)}></i>
+                <strong>&nbsp;{log.actionType}</strong>: {log.extraDetails || ''}<br/>
+                <i class="fa-solid fa-arrow-right-to-bracket fa-xs"></i>
+                &nbsp;{log.loggedIP}<br/>
+                <i class="fa-solid fa-clock fa-xs"></i>
+                &nbsp;{log.timestamp}<br/>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

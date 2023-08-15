@@ -1,9 +1,8 @@
 const pool = require('./mysqlPool');
-const { listLogs } = require('./helper');
+const { formatTimestamp, listLogs } = require('./helper');
 
 module.exports = function (socket, usersOnline) {
   socket.on('localLogListUpdate', async (data) => {
-    console.log('test');
     if (!usersOnline[socket.id]) {
       socket.disconnect();
       return;
@@ -12,10 +11,20 @@ module.exports = function (socket, usersOnline) {
     try {
       const ip = usersOnline[socket.id].ip;
       const conn = await pool.getConnection();
+      let logs = [];
 
       try {
         localLogs = await listLogs(conn, ip);
-        socket.emit('localLogListUpdate', localLogs);
+        localLogs.forEach(row => {
+          logs.push({
+            id: row.id,
+            actionType: row.actionType,
+            extraDetails: row.extraDetails,
+            loggedIP: row.loggedIP,
+            timestamp: formatTimestamp(row.timestamp),
+          });
+        });
+        socket.emit('localLogListUpdate', logs);
       } finally {
         conn.release();
       }

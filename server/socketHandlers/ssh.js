@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { isValidIPAddress, addLog, listLogs } = require('./helper');
+const { formatTimestamp, isValidIPAddress, addLog, listLogs } = require('./helper');
 
 module.exports = function (io, socket, usersOnline) {
   socket.on('ssh', async (data) => {
@@ -38,19 +38,43 @@ module.exports = function (io, socket, usersOnline) {
 
           for (const socketID in usersOnline) {
             const newUser = usersOnline[socketID];
+            let localLogs, remoteLogs;
 
             if (socketID === socket.id) {
-              const remoteLogs = await listLogs(conn, targetIp);
-              const localLogs = await listLogs(conn, user.ip);
-      
-              socket.emit('remoteLogListUpdate', remoteLogs);
-              socket.emit('localLogListUpdate', localLogs);
+              remoteLogs = await listLogs(conn, targetIp);
+              localLogs = await listLogs(conn, user.ip);
             } else if (newUser.ip === targetIp) {
-              const localLogs = await listLogs(conn, user.ip);
-              io.to(socketID).emit('localLogListUpdate', localLogs);
+              localLogs = await listLogs(conn, user.ip);
             } else if (newUser.connTo === user.ip || newUser.connTo === targetIp) {
-              const remoteLogs = await listLogs(conn, newUser.connTo);
-              io.to(socketID).emit('remoteLogListUpdate', remoteLogs);
+              remoteLogs = await listLogs(conn, newUser.connTo);
+            }
+
+            if (localLogs) {
+              let logs = [];
+              localLogs.forEach(row => {
+                logs.push({
+                  id: row.id,
+                  actionType: row.actionType,
+                  extraDetails: row.extraDetails,
+                  loggedIP: row.loggedIP,
+                  timestamp: formatTimestamp(row.timestamp),
+                });
+              });
+              io.to(socketID).emit('localLogListUpdate', logs);
+            }
+
+            if (remoteLogs) {
+              let logs = [];
+              remoteLogs.forEach(row => {
+                logs.push({
+                  id: row.id,
+                  actionType: row.actionType,
+                  extraDetails: row.extraDetails,
+                  loggedIP: row.loggedIP,
+                  timestamp: formatTimestamp(row.timestamp),
+                });
+              });
+              io.to(socketID).emit('remoteLogListUpdate', logs);
             }
           }
           

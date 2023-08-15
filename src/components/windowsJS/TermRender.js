@@ -75,7 +75,7 @@ class Terminal extends Component {
 
   handleRef = () => {
     const promptWidth = this.promptRef.current.offsetWidth;
-    const rmWidth = promptWidth + 7;
+    const rmWidth = promptWidth + 10;
     
     this.setState({
       rmWidth: rmWidth

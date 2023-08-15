@@ -1,5 +1,4 @@
-const pool = require('./mysqlPool'); // Adjust the path accordingly
-const { isValidIPAddress } = require('./helper');
+const pool = require('./mysqlPool');
 
 module.exports = function (socket, usersOnline) {
   socket.on('dir', async () => {

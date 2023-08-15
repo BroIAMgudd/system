@@ -1,6 +1,6 @@
-const pool = require('./mysqlPool'); // Adjust the path accordingly
+const pool = require('./mysqlPool');
 const bcrypt = require('bcrypt');
-const { formatTimestamp } = require('./helper'); // You should have a module for this as per your previous code
+const { formatTimestamp } = require('./helper');
 
 module.exports = function (socket) {
   socket.on('login', async (data) => {

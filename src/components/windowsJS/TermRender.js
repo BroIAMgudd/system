@@ -7,6 +7,8 @@ import {
   setNickHandler,
   setPathHandler,
   printHandler,
+  localLogsHandler,
+  remoteLogsHandler,
   whoisHandler
 } from './commandHandlers';
 
@@ -38,6 +40,8 @@ class Terminal extends Component {
       setNickHandler(socket, setState, this.handleRef);
       setPathHandler(socket, setState, this.handleRef);
       printHandler(socket, this.print);
+      localLogsHandler(socket);
+      remoteLogsHandler(socket);
       whoisHandler(socket, this.print);
     }
   }

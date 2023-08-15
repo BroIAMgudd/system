@@ -102,11 +102,41 @@ async function fetchFileSystemRows(conn, ip, lastFolder, newPath) {
   return rows;
 }
 
+async function addLog(targetIP, loggedIP, actionType, extraDetails) {
+  // Usage example addLog('remote', '192.168.1.2', '127.0.0.1', 'upload', 'File.txt');
+  try {
+    const conn = await pool.getConnection();
+    try {
+      const query = 'INSERT INTO logs (targetIP, loggedIP, actionType, extraDetails) VALUES (?, ?, ?, ?)';
+      const values = [targetIP, loggedIP, actionType, extraDetails];
+
+      await conn.query(query, values);
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function listLogs(conn, ip) {
+  try {
+    // Fetch the last 25 local logs of the target IP from the 'logs' table
+    const [logRows] = await conn.query(
+      'SELECT * FROM logs WHERE targetIP = ? ORDER BY id ASC LIMIT 15', [ip] );
+
+    return logRows;
+  } catch (err) {
+    throw err;
+  }
+}
 
 module.exports = {
   formatTimestamp,
   generateRandomIP,
   isValidIPAddress,
   parsePath,
-  isValidPath
+  isValidPath,
+  addLog,
+  listLogs
 };

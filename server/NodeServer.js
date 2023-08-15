@@ -19,6 +19,7 @@ const io = socketIO(server, {
 const registerHandler = require('./socketHandlers/register');
 const loginHandler = require('./socketHandlers/login');
 const getUserHandler = require('./socketHandlers/getUser');
+const loadLocalLogsHandler = require('./socketHandlers/loadLocalLogs');
 const sshHandler = require('./socketHandlers/ssh');
 const cdHandler = require('./socketHandlers/changeDir');
 const exitHandler = require('./socketHandlers/exit');
@@ -37,33 +38,12 @@ const disconnectHandler = require('./socketHandlers/disconnect');
 
 const usersOnline = {};
 
-async function addLog(logType, targetIP, loggedIP, actionType, extraDetails) {
-  const pool = await mysql.createPool({
-    host: 'your-db-host',
-    user: 'your-db-user',
-    password: 'your-db-password',
-    database: 'your-db-name'
-  });
-
-  try {
-    const conn = await pool.getConnection();
-    const query = 'INSERT INTO logs (log_type, target_ip, logged_ip, action_type, extra_details) VALUES (?, ?, ?, ?, ?)';
-    const values = [logType, targetIP, loggedIP, actionType, extraDetails];
-
-    await conn.query(query, values);
-  } catch (error) {
-    console.error('Error adding log:', error);
-  } finally {
-    conn.release();
-  }
-}
-
-// WebSocket event handling
 io.on('connection', (socket) => {
   registerHandler(socket);
   loginHandler(socket);
   getUserHandler(socket, usersOnline);
-  sshHandler(socket, usersOnline);
+  loadLocalLogsHandler(socket, usersOnline);
+  sshHandler(io, socket, usersOnline);
   cdHandler(socket, usersOnline);
   exitHandler(socket, usersOnline);
   whoisHandler(socket, usersOnline);

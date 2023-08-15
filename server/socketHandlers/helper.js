@@ -1,19 +1,5 @@
 const pool = require('./mysqlPool');
 
-function formatTimestamp(timestamp) {
-  const date = new Date(timestamp);
-  
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-}
-
 function generateRandomIP() {
   return Array(4).fill(0).map((_, i) => Math.floor(Math.random() * 255) + (i === 0 ? 1 : 0)).join('.');
 }
@@ -117,7 +103,7 @@ async function addLog(targetIP, loggedIP, actionType, extraDetails, usersOnline,
         actionType: actionType,
         extraDetails: extraDetails,
         loggedIP: loggedIP,
-        timestamp: formatTimestamp(Date.now())
+        timestamp: Date.now()
       }
 
       for (const socketID in usersOnline) {
@@ -152,7 +138,6 @@ async function listLogs(conn, ip) {
 }
 
 module.exports = {
-  formatTimestamp,
   generateRandomIP,
   isValidIPAddress,
   parsePath,

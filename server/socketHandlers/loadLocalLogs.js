@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { formatTimestamp, listLogs } = require('./helper');
+const { listLogs } = require('./helper');
 
 module.exports = function (socket, usersOnline) {
   socket.on('localLogListUpdate', async (data) => {
@@ -21,7 +21,7 @@ module.exports = function (socket, usersOnline) {
             actionType: row.actionType,
             extraDetails: row.extraDetails,
             loggedIP: row.loggedIP,
-            timestamp: formatTimestamp(row.timestamp),
+            timestamp: row.timestamp,
           });
         });
         socket.emit('localLogListUpdate', logs);

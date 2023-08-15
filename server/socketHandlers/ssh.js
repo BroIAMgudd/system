@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { formatTimestamp, isValidIPAddress, addLog, listLogs } = require('./helper');
+const { isValidIPAddress, addLog, listLogs } = require('./helper');
 
 module.exports = function (io, socket, usersOnline) {
   socket.on('ssh', async (data) => {
@@ -43,7 +43,7 @@ module.exports = function (io, socket, usersOnline) {
               actionType: row.actionType,
               extraDetails: row.extraDetails,
               loggedIP: row.loggedIP,
-              timestamp: formatTimestamp(row.timestamp),
+              timestamp: row.timestamp,
             });
           });
           socket.emit('remoteLogListUpdate', logs);

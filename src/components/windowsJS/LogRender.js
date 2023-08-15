@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import '../css/logs.css'
+import { formatTimestamp } from './commandHandlers';
 import {
   localLogListUpdate,
   remoteLogListUpdate,
@@ -12,8 +13,8 @@ class LogViewer extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      localLogs: [],   // Array to hold local logs
-      remoteLogs: []   // Array to hold remote logs
+      localLogs: [],
+      remoteLogs: []
     };
   }
 
@@ -53,7 +54,7 @@ class LogViewer extends Component {
         <div className="log-list">
           <div className="log-item">
             <div className="log-title">Remote Logs</div>
-            {remoteLogs.map((log, index) => (
+            {remoteLogs.map((log) => (
               <div key={log.id}
               className='remote'>
                 <i className="fa-solid fa-wifi fa-xs"></i>
@@ -62,7 +63,7 @@ class LogViewer extends Component {
                 <i className="fa-solid fa-arrow-right-to-bracket fa-xs"></i>
                 &nbsp;{log.loggedIP}<br/>
                 <i className="fa-solid fa-clock fa-xs"></i>
-                &nbsp;{log.timestamp}<br/>
+                &nbsp;{formatTimestamp(log.timestamp)}<br/>
               </div>
             ))}
           </div>
@@ -77,7 +78,7 @@ class LogViewer extends Component {
                 <i className="fa-solid fa-arrow-right-to-bracket fa-xs"></i>
                 &nbsp;{log.loggedIP}<br/>
                 <i className="fa-solid fa-clock fa-xs"></i>
-                &nbsp;{log.timestamp}<br/>
+                &nbsp;{formatTimestamp(log.timestamp)}<br/>
               </div>
             ))}
           </div>

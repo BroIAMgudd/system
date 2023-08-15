@@ -1,6 +1,5 @@
 const pool = require('./mysqlPool');
 const bcrypt = require('bcrypt');
-const { formatTimestamp } = require('./helper');
 
 module.exports = function (socket) {
   socket.on('login', async (data) => {
@@ -39,7 +38,7 @@ async function isPasswordValid(plainPassword, hashedPassword) {
 async function updateSessionAndLastOnline(conn, sessionId, username) {
   await conn.query('UPDATE users SET sessionID = ?, lastOnline = ? WHERE username = ?', [
     sessionId,
-    formatTimestamp(Date.now()),
+    Date.now(),
     username
   ]);
 }

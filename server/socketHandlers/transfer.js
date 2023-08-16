@@ -1,6 +1,7 @@
-const pool = require('./mysqlPool'); // Adjust the path accordingly
+const pool = require('./mysqlPool');
+const { addLog } = require('./helper');
 
-module.exports = function (socket, usersOnline) {
+module.exports = function (socket, usersOnline, io) {
   socket.on('transfer', async (data) => {
     const { ip, connTo, path, nick } = usersOnline[socket.id];
     const { fileInfo, type, search } = data;
@@ -76,8 +77,15 @@ module.exports = function (socket, usersOnline) {
           [file.status, file.owner, receiver, file.filename, file.ext, file.size, filePath, file.permission, file.version]
         );
       }
-  
-      socket.emit('print', { msg: 'File transferred.' });
+
+      const actionType = (type === 'ul') ? 'Upload' : 'Download';
+      const fileType = (file.ext === 'folder') ? 'Folder' : 'File';
+      const fileName = (file.ext === 'folder') ? file.filename : `${file.filename}.${file.ext}`;
+
+      await addLog(receiver, sender, `${actionType} ${fileType}`, fileName, usersOnline, io);
+      await addLog(sender, receiver, `${actionType} ${fileType}`, fileName, usersOnline, io);
+
+      socket.emit('print', { msg: `${fileType} ${actionType}ed ${fileName}` });
     } catch (error) {
       console.error('Upload Error:', error.message);
       socket.emit('print', { msg: 'An error occurred during file upload.' });

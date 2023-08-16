@@ -71,7 +71,14 @@ export const processCommand = (path, args, socket, print, setState) => {
       if (!params[0] || !params[1]) {
         print('Need a little more info bud');
       } else {
-        socket.emit('move', { filename: params[0], updatePath: params[1] });
+        socket.emit('move', { fileInfo: params[0], updatePath: params[1], search: 'name' });
+      }
+    },
+    'moveid': (params) => {
+      if (!params[0] || !params[1]) {
+        print('Need a little more info bud');
+      } else {
+        socket.emit('move', { fileInfo: params[0], updatePath: params[1], search: 'id' });
       }
     },
     'setnick': (params) => {
@@ -121,6 +128,7 @@ export const setPathHandler = (socket, setState, handleRef) => {
 
 export const printHandler = (socket, print) => {
   socket.on('print', (data) => {
+    console.log(data.msg);
     print(data.msg);
   });
 };

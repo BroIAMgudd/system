@@ -1,34 +1,45 @@
-const pool = require('./mysqlPool'); // Adjust the path accordingly
+const pool = require('./mysqlPool');
+const { addLog } = require('./helper');
 
-module.exports = function (socket, usersOnline) {
+module.exports = function (socket, usersOnline, io) {
   socket.on('touch', async (data) => {
     if (!usersOnline[socket.id]) {
       socket.disconnect();
       return;
     }
 
-    const user = usersOnline[socket.id];
-    const ip = (user.connTo === '') ? user.ip : user.connTo;
+    const fileName = data.name;
+    const { username, ip, connTo, path } = usersOnline[socket.id];
+    const targetIP = (!connTo) ? ip : connTo;
+    const actionType = 'Create File';
+    const file = `${fileName}.txt`;
 
     try {
       const conn = await pool.getConnection();
       try {
-        await createNewFile(conn, user, ip, data.name);
-        socket.emit('print', { msg: `Created new file: ${data.name}.txt` });
+        await createNewFile(conn, username, targetIP, path, fileName);
         
+        socket.emit('print', { msg: `Created new file: ${file}` });
+        
+        if (!connTo) {
+          await addLog(ip, ip, actionType, file, usersOnline, io);
+        } else {
+          await addLog(targetIP, ip, actionType, file, usersOnline, io);
+          await addLog(ip, targetIP, actionType, file, usersOnline, io);
+        }
       } finally {
         conn.release();
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      console.error('Error:', err);
       socket.emit('print', { msg: 'An error occurred while creating the file.' });
     }
   });
 };
 
-async function createNewFile(conn, user, ip, filename) {
+async function createNewFile(conn, username, targetIP, path, filename) {
   await conn.query(
     'INSERT INTO filesystem (owner, ip, filename, ext, path) VALUES (?, ?, ?, ?, ?)',
-    [user.username, ip, filename, 'txt', user.path]
+    [username, targetIP, filename, 'txt', path]
   );
 }

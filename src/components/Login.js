@@ -23,7 +23,12 @@ class Login extends Component {
     }
   
     event.preventDefault();
-  };  
+  }; 
+
+  login = (username, password) => {
+    const { socket } = this.props;
+    socket.emit('login', { username, password });
+  };
 
   componentDidMount() {
     this.inputRef.current.focus();
@@ -82,6 +87,10 @@ class Login extends Component {
           <input className={styles.submit} type="submit" value="Login" />
         </form>
         <button className={styles.submit} onClick={this.props.regToggle}>Create an Account</button>
+        <button className={styles.submit} onClick={() => this.login('Hi_Guys', '561821' )}>Hi_Guys</button>
+        <button className={styles.submit} onClick={() => this.login('doireallyexist', '123456' )}>doireallyexist</button>
+        <button className={styles.submit} onClick={() => this.login('Thisisatest', '123456' )}>Thisisatest</button>
+        <button className={styles.submit} onClick={() => this.login('Thisisatest2', '123456' )}>Thisisatest2</button>
         {/* TODO: Create a lost passoword button */}
       </div>
     );

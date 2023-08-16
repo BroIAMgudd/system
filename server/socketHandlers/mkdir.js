@@ -1,6 +1,7 @@
-const pool = require('./mysqlPool'); // Adjust the path accordingly
+const pool = require('./mysqlPool');
+const { addLog } = require('./helper');
 
-module.exports = function (socket, usersOnline) {
+module.exports = function (socket, usersOnline, io) {
   socket.on('mkdir', async (data) => {
     if (!usersOnline[socket.id]) {
       socket.disconnect();
@@ -8,12 +9,21 @@ module.exports = function (socket, usersOnline) {
     }
 
     try {
-      const user = usersOnline[socket.id];
-      const ip = (user.connTo === '') ? user.ip : user.connTo;
+      const { username, ip, path, connTo } = usersOnline[socket.id];
+      const targetIP = (!connTo) ? ip : connTo;
+      const fileName = data.name;
+      const actionType = 'Created Folder'
       const conn = await pool.getConnection();
       try {
-        await insertNewFolder(conn, user, ip, data.name);
-        socket.emit('print', { msg: `Created new folder: ${data.name}` });
+        await insertNewFolder(conn, username, path, targetIP, fileName);
+        socket.emit('print', { msg: `Created new folder: ${fileName}` });
+
+        if (!connTo) {
+          await addLog(ip, ip, actionType, fileName, usersOnline, io);
+        } else {
+          await addLog(targetIP, ip, actionType, fileName, usersOnline, io);
+          await addLog(ip, targetIP, actionType, fileName, usersOnline, io);
+        }
       } finally {
         conn.release();
       }
@@ -24,12 +34,12 @@ module.exports = function (socket, usersOnline) {
   });
 };
 
-async function insertNewFolder(conn, user, ip, folderName) {
+async function insertNewFolder(conn, username, path, ip, folderName) {
   await conn.query('INSERT INTO filesystem (owner, ip, filename, ext, path) VALUES (?, ?, ?, ?, ?)', [
-    user.username,
+    username,
     ip,
     folderName,
     'folder',
-    user.path
+    path
   ]);
 }

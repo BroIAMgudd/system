@@ -49,13 +49,12 @@ function separateFilesAndFolders(files) {
   const filesList = [];
 
   files.forEach(file => {
-    const formattedModification = new Date(file.modification).toLocaleString();
     const entry = {
       id: file.id,
       name: file.ext === 'folder' ? file.filename : `${file.filename}.${file.ext}`,
       type: file.ext === 'folder' ? 'Folder' : 'File',
       size: file.ext === 'folder' ? '' : file.size,
-      modification: formattedModification,
+      modification: file.modification,
       version: file.ext === 'folder' ? '' : `v${file.version}`
     };
 

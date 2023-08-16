@@ -1,6 +1,6 @@
 const pool = require('./mysqlPool');
 
-module.exports = function (io, socket, usersOnline) {
+module.exports = function (socket, usersOnline, io) {
   socket.on('deleteLog', async (logId) => {
     try {
       const user = usersOnline[socket.id];
@@ -24,13 +24,10 @@ module.exports = function (io, socket, usersOnline) {
           socket.emit('deleteLog', logId);
         } else if (newUser.ip === user.connTo) {
           io.to(socketID).emit('deleteLog', logId);
-          console.log('socketID === socket.id', newUser.username);
         } else if (newUser.connTo === user.ip) {
           io.to(socketID).emit('deleteLog', logId);
-          console.log('newUser.connTo === user.ip', newUser.username);
         } else if (newUser.connTo === user.connTo) {
           io.to(socketID).emit('deleteLog', logId);
-          console.log('newUser.connTo === user.connTo', newUser.username);
         }
       }
     } catch (err) {

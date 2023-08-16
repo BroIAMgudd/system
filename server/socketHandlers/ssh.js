@@ -1,7 +1,7 @@
 const pool = require('./mysqlPool');
 const { isValidIPAddress, addLog, listLogs } = require('./helper');
 
-module.exports = function (io, socket, usersOnline) {
+module.exports = function (socket, usersOnline, io) {
   socket.on('ssh', async (data) => {
     if (!usersOnline[socket.id]) {
       socket.disconnect();

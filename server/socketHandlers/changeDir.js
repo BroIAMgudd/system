@@ -25,7 +25,7 @@ module.exports = function (socket, usersOnline) {
         nick = user.nick;
       }
 
-      const sanitizedPath = path.replace(/\\/g, '/').replace(/^\/|\/$/g, '');
+      const sanitizedPath = path.replace(/\\/g, '/').replace(/^\.\/(?!\.\/)/, '').replace(/^\/|\/$/g, '');
       const updatedPath = parsePath(currentPath, sanitizedPath);
 
       if (!updatedPath) {

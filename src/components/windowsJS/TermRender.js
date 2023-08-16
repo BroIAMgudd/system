@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import DOMPurify from 'dompurify'
 import '../css/terminal.css'
+import { formatTimestamp } from './commandHandlers';
 import { 
   isValidIPAddress, 
   processCommand,
@@ -61,10 +62,41 @@ class Terminal extends Component {
 
   isValidIPAddress = isValidIPAddress
 
-  print = (text) => {
-    this.setState((prevState) => ({
-      output: [...prevState.output, { type: 'output', text }],
-    }), () => {
+  print = (output) => {
+    this.setState((prevState) => {
+      let updatedOutput = [...prevState.output];
+      
+      if (typeof output === 'string') {
+        // Check if the string represents an HTML table
+        const isTable = output.trim().startsWith('<table>');
+  
+        if (isTable) {
+          // Parse the table string and format timestamp cells
+          const parser = new DOMParser();
+          const tableDoc = parser.parseFromString(output, 'text/html');
+          const tableElement = tableDoc.querySelector('table');
+  
+          const formattedTableRows = Array.from(tableElement.querySelectorAll('tr')).map(row => {
+            const formattedCells = Array.from(row.children).map((cell, index) => {
+              if (index === row.children.length - 1 && cell.tagName.toLowerCase() === 'td') {
+                const timestamp = new Date(cell.textContent).toString();
+                return `<td>${formatTimestamp(timestamp)}</td>`;
+              }
+              return cell.outerHTML;
+            });
+  
+            return `<tr>${formattedCells.join('')}</tr>`;
+          });
+  
+          const formattedTable = `<table>${formattedTableRows.join('')}</table>`;
+          updatedOutput.push({ text: formattedTable });
+        } else {
+          updatedOutput.push({ text: output });
+        }
+      }
+  
+      return { output: updatedOutput };
+    }, () => {
       this.promptRef.current.scrollIntoView();
     });
   };

@@ -33,6 +33,7 @@ const touchHandler = require('./socketHandlers/touch');
 const transferHandler = require('./socketHandlers/transfer');
 const rmHandler = require('./socketHandlers/remove');
 const moveHandler = require('./socketHandlers/move');
+const submitTaskHandler = require('./socketHandlers/submitTask');
 const testHandler = require('./socketHandlers/test');
 const heartbeatHandler = require('./socketHandlers/heartbeat');
 const disconnectHandler = require('./socketHandlers/disconnect');
@@ -57,6 +58,7 @@ io.on('connection', (socket) => {
   transferHandler(socket, usersOnline, io);
   rmHandler(socket, usersOnline, io);
   moveHandler(socket, usersOnline, io);
+  submitTaskHandler(socket, usersOnline, io);
   testHandler(socket);
   heartbeatHandler(socket, usersOnline);
   disconnectHandler(socket, usersOnline);

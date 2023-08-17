@@ -15,8 +15,8 @@ class Game extends Component {
       usb: 5.00,
       winRender: {
         term: true,
-        task: false,
-        log: true,
+        net: true,
+        log: false,
         chat: false
       }
     }
@@ -60,7 +60,7 @@ class Game extends Component {
     return (
       <>
         {this.state.winRender.term ? <DragComp name='Terminal' short='term' openClose={this.openClose} socket={this.props.socket}/> : null}
-        {this.state.winRender.task ? <DragComp name='Task Manager' short='task' openClose={this.openClose} socket={this.props.socket}/> : null}
+        {this.state.winRender.net ? <DragComp name='Network Dashboard' short='net' openClose={this.openClose} socket={this.props.socket}/> : null}
         {this.state.winRender.log ? <DragComp name='Log Manager' short='log' openClose={this.openClose} socket={this.props.socket}/> : null}
         {this.state.winRender.chat ? <DragComp name='Global Chat' short='chat' openClose={this.openClose} socket={this.props.socket}/> : null}
       </>

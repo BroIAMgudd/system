@@ -95,6 +95,12 @@ export const processCommand = (path, args, socket, print, setState) => {
         socket.emit('touch', { name: params[0] });
       }
     },
+    'net': () => {
+      socket.emit('getNetworkProcesses');
+    },
+    'net2': () => {
+      socket.emit('getNetworkProcesses2');
+    },
   };
 
   const [command, ...params] = args;

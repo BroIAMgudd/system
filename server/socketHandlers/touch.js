@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { addLog } = require('./helper');
+const { addLog } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('touch', async (data) => {

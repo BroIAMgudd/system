@@ -59,9 +59,9 @@ async function insertSystem(conn, username, ip) {
     username,
     username.slice(0, 6),
     ip,
-    750,
+    2.75,
     2560,
-    5
+    250
   ]);
 }
 

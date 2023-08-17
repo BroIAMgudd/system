@@ -88,42 +88,12 @@ async function fetchFileSystemRows(conn, ip, lastFolder, newPath) {
   return rows;
 }
 
-async function addLog(targetIP, loggedIP, actionType, extraDetails, usersOnline, io) {
-  // Usage example addLog('remote', '192.168.1.2', '127.0.0.1', 'upload', 'File.txt');
-  try {
-    const conn = await pool.getConnection();
-    try {
-      const query = 'INSERT INTO logs (targetIP, loggedIP, actionType, extraDetails) VALUES (?, ?, ?, ?)';
-      const values = [targetIP, loggedIP, actionType, extraDetails];
-
-      const [row] = await conn.query(query, values);
-
-      const log = {
-        id: row.insertId,
-        actionType: actionType,
-        extraDetails: extraDetails,
-        loggedIP: loggedIP,
-        timestamp: Date.now()
-      }
-
-      for (const socketID in usersOnline) {
-        const newUser = usersOnline[socketID];
-
-        if (newUser.ip === targetIP) {
-          io.to(socketID).emit('localLogUpdate', log);
-        }
-        
-        if (newUser.connTo === targetIP) {
-          io.to(socketID).emit('remoteLogUpdate', log);
-        }
-      };
-    } finally {
-      conn.release();
-    }
-  } catch (err) {
-    throw err;
-  }
+function addSeconds(date, seconds) {
+  let futureDate = new Date(date + seconds*1000);
+  return futureDate;
 }
+
+function calcMBSpeed(sizeMB, speed) { return sizeMB * (1 / speed); }
 
 async function listLogs(conn, ip) {
   try {
@@ -142,6 +112,7 @@ module.exports = {
   isValidIPAddress,
   parsePath,
   isValidPath,
-  addLog,
+  addSeconds,
+  calcMBSpeed,
   listLogs
 };

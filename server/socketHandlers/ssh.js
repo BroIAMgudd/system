@@ -1,5 +1,6 @@
 const pool = require('./mysqlPool');
-const { isValidIPAddress, addLog, listLogs } = require('./helper');
+const { isValidIPAddress, listLogs } = require('./helper');
+const { addLog } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('ssh', async (data) => {

@@ -134,7 +134,6 @@ export const setPathHandler = (socket, setState, handleRef) => {
 
 export const printHandler = (socket, print) => {
   socket.on('print', (data) => {
-    console.log(data.msg);
     print(data.msg);
   });
 };

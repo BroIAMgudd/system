@@ -4,7 +4,7 @@ const { addTask } = require('./dbRequests');
 module.exports = function (socket, usersOnline, io) {
   socket.on('rm', async (data) => {
     const { ip, connTo, path } = usersOnline[socket.id];
-    let { fileInfo, search } = data;
+    const { fileInfo, search } = data;
     
     const targetIP = (!connTo) ? ip : connTo;
     const conn = await pool.getConnection();

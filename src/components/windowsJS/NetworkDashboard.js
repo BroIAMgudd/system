@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import '../css/NetworkComponent.css';
+import { deleteTaskHandle } from './netHandlers';
 
 class NetworkDashboard extends Component {
   constructor(props) {
@@ -16,6 +17,8 @@ class NetworkDashboard extends Component {
   componentDidMount() {
     const { socket } = this.props;
     this.startCountdowns();
+
+    deleteTaskHandle(socket, this.removeTask);
   
     // Listen for socket updates for network processes
     socket.on('addNetworkProcess', (task) => {
@@ -79,7 +82,16 @@ class NetworkDashboard extends Component {
   submitTask = (id) => {
     const { socket } = this.props;
     socket.emit('submitTask', id);
-  } 
+  }
+
+  removeTask = (id) => {
+    const { networkProcesses } = this.state;
+
+    // Update state to remove the deleted task
+    this.setState({
+      networkProcesses: networkProcesses.filter(task => task.taskid !== id),
+    });
+  };
   
   renderSummary = (selectedTask) => {
     const { online } = this.state;

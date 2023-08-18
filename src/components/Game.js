@@ -2,7 +2,6 @@ import React, { Component } from 'react'
 import DragComp from './DragComp'
 
 class Game extends Component {
-
   constructor(props) {
     super(props)
     this.state = {
@@ -16,8 +15,8 @@ class Game extends Component {
       winRender: {
         term: true,
         net: true,
-        log: false,
-        chat: false
+        log: true,
+        monz: true
       }
     }
   }
@@ -62,7 +61,7 @@ class Game extends Component {
         {this.state.winRender.term ? <DragComp name='Terminal' short='term' openClose={this.openClose} socket={this.props.socket}/> : null}
         {this.state.winRender.net ? <DragComp name='Network Dashboard' short='net' openClose={this.openClose} socket={this.props.socket}/> : null}
         {this.state.winRender.log ? <DragComp name='Log Manager' short='log' openClose={this.openClose} socket={this.props.socket}/> : null}
-        {this.state.winRender.chat ? <DragComp name='Global Chat' short='chat' openClose={this.openClose} socket={this.props.socket}/> : null}
+        {this.state.winRender.monz ? <DragComp name='Finances' short='monz' openClose={this.openClose} socket={this.props.socket}/> : null}
       </>
     )
   }

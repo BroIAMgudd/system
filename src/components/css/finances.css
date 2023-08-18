@@ -1,0 +1,45 @@
+.finances {
+  display: inline-block;
+  width: 75%;
+}
+
+.bank-accounts-list {
+  position: absolute;
+  top: 0;
+  z-index: -1;
+  width: 75%;
+}
+
+.btc-wallet {
+  display: inline-block;
+  width: 25%;
+  height: 100%;
+  text-align: center;
+  background: black;
+  border-left: 1px solid;
+}
+
+.btc-dropdown, .btc-amount {
+  width: 80%;
+  height: 25px;
+  margin: 5px 5px 1px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #2a2a2a;
+  resize: none;
+  text-align: center;
+  color: azure;
+}
+
+.btc-amount {
+  overflow: hidden;
+}
+
+.btc-submit {
+  width: 80%;
+  margin: 0px 5px;
+  color: azure;
+  background-color: #0275d8;
+  border-color: #0275d8;
+  border-radius: 4px;
+}

@@ -112,8 +112,7 @@ async function transfer(socket, task, user, usersOnline, io) {
       const { filename, ext, path } = file;
 
       if (ext === 'folder') {
-        const getfilePath = (actionType === 'Upload') ? path : nick;
-        const [folderDup] = await getFile('name', filename, receiver, getfilePath);
+        const [folderDup] = await getFile('name', filename, receiver, receiverNick);
 
         if (folderDup.length > 0) {
           socket.emit('print', { msg: 'Folder with same name already exists.' });

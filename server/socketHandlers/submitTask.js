@@ -4,7 +4,6 @@ const { deleteFile, transfer } = require('./dbRequests');
 module.exports = function (socket, usersOnline, io) {
   socket.on('submitTask', async (id) => {
     const user = usersOnline[socket.id];
-    const { username, ip, connTo } = user;
     const conn = await pool.getConnection();
   
     submitTask: try {
@@ -19,8 +18,6 @@ module.exports = function (socket, usersOnline, io) {
         socket.emit('print', { msg: 'Task Not Finished' });
         break submitTask;
       }
-
-      await conn.query('DELETE FROM tasks WHERE id = ?', [id]);
 
       if (actionType === 'Remove') {
         deleteFile(socket, task, user, usersOnline, io);

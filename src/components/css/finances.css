@@ -3,17 +3,53 @@
   width: 75%;
 }
 
-.bank-accounts-list {
+.bank-accounts-header {
   position: absolute;
+  text-align: center;
   top: 0;
-  z-index: -1;
   width: 75%;
 }
 
+.bank-accounts-total {
+  font-size: 12.5px;
+}
+
+.bank-accounts-list {
+  position: absolute;
+  top: 35px;
+  width: 75%;
+}
+
+.bank-account {
+  font-size: 14px;
+}
+
+.hideView {
+  position: relative;
+  float: right;
+  top: 10px;
+}
+
+.btc-title, .bank-accounts-total-title {
+  font-weight: 700;
+}
+
+.btc-sign {
+  position: relative;
+  top: 1.5px;
+}
+
+.btc-total {
+  display: inline-block;
+  font-size: 12.5px;
+}
+
 .btc-wallet {
+  position: relative;
   display: inline-block;
   width: 25%;
   height: 100%;
+  z-index: 2;
   text-align: center;
   background: black;
   border-left: 1px solid;

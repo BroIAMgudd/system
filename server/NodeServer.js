@@ -1,7 +1,6 @@
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
-const mysql = require('mysql2/promise');
 const cors = require('cors');
 const { uptime } = require('process');
 
@@ -16,52 +15,57 @@ const io = socketIO(server, {
 });
 
 // Import socket event handlers
-const registerHandler = require('./socketHandlers/register');
-const loginHandler = require('./socketHandlers/login');
-const getUserHandler = require('./socketHandlers/getUser');
-const loadLocalLogsHandler = require('./socketHandlers/loadLocalLogs');
-const removeLogHandler = require('./socketHandlers/rmLog');
-const sshHandler = require('./socketHandlers/ssh');
-const cdHandler = require('./socketHandlers/changeDir');
-const exitHandler = require('./socketHandlers/exit');
-const whoisHandler = require('./socketHandlers/whois');
-const nickHandler = require('./socketHandlers/setNick');
-const makeDirHandler = require('./socketHandlers/mkdir');
-const dirHandler = require('./socketHandlers/dir');
-const messageHandler = require('./socketHandlers/message');
-const touchHandler = require('./socketHandlers/touch');
-const transferHandler = require('./socketHandlers/transfer');
-const rmHandler = require('./socketHandlers/remove');
-const moveHandler = require('./socketHandlers/move');
-const submitTaskHandler = require('./socketHandlers/submitTask');
-const testHandler = require('./socketHandlers/test');
-const heartbeatHandler = require('./socketHandlers/heartbeat');
-const disconnectHandler = require('./socketHandlers/disconnect');
+const registerH = require('./socketHandlers/register');
+const loginH = require('./socketHandlers/login');
+const getUserH = require('./socketHandlers/getUser');
+const loadLocalLogsH = require('./socketHandlers/loadLocalLogs');
+const getFinancesH = require('./socketHandlers/getFinances');
+const btcRequestH = require('./socketHandlers/btcRequest');
+const removeLogH = require('./socketHandlers/rmLog');
+const sshH = require('./socketHandlers/ssh');
+const cdH = require('./socketHandlers/changeDir');
+const exitH = require('./socketHandlers/exit');
+const whoisH = require('./socketHandlers/whois');
+const nickH = require('./socketHandlers/setNick');
+const makeDirH = require('./socketHandlers/mkdir');
+const dirH = require('./socketHandlers/dir');
+const messageH = require('./socketHandlers/message');
+const touchH = require('./socketHandlers/touch');
+const transferH = require('./socketHandlers/transfer');
+const rmH = require('./socketHandlers/remove');
+const moveH = require('./socketHandlers/move');
+const submitTaskH = require('./socketHandlers/submitTask');
+const testH = require('./socketHandlers/test');
+const heartbeatH = require('./socketHandlers/heartbeat');
+const disconnectH = require('./socketHandlers/disconnect');
 
 const usersOnline = {};
+const btcPrice = 15798;
 
 io.on('connection', (socket) => {
-  registerHandler(socket);
-  loginHandler(socket);
-  getUserHandler(socket, usersOnline);
-  loadLocalLogsHandler(socket, usersOnline);
-  removeLogHandler(socket, usersOnline, io);
-  sshHandler(socket, usersOnline, io);
-  cdHandler(socket, usersOnline);
-  exitHandler(socket, usersOnline);
-  whoisHandler(socket, usersOnline);
-  nickHandler(socket, usersOnline);
-  makeDirHandler(socket, usersOnline, io);
-  dirHandler(socket, usersOnline);
-  messageHandler(socket, usersOnline);
-  touchHandler(socket, usersOnline, io);
-  transferHandler(socket, usersOnline, io);
-  rmHandler(socket, usersOnline, io);
-  moveHandler(socket, usersOnline, io);
-  submitTaskHandler(socket, usersOnline, io);
-  testHandler(socket);
-  heartbeatHandler(socket, usersOnline);
-  disconnectHandler(socket, usersOnline);
+  registerH(socket);
+  loginH(socket);
+  getUserH(socket, usersOnline);
+  loadLocalLogsH(socket, usersOnline);
+  getFinancesH(socket, usersOnline, btcPrice);
+  btcRequestH(socket, usersOnline, btcPrice);
+  removeLogH(socket, usersOnline, io);
+  sshH(socket, usersOnline, io);
+  cdH(socket, usersOnline);
+  exitH(socket, usersOnline);
+  whoisH(socket, usersOnline);
+  nickH(socket, usersOnline);
+  makeDirH(socket, usersOnline, io);
+  dirH(socket, usersOnline);
+  messageH(socket, usersOnline);
+  touchH(socket, usersOnline, io);
+  transferH(socket, usersOnline, io);
+  rmH(socket, usersOnline, io);
+  moveH(socket, usersOnline, io);
+  submitTaskH(socket, usersOnline, io);
+  testH(socket);
+  heartbeatH(socket, usersOnline);
+  disconnectH(socket, usersOnline);
 });
 
 setInterval(() => {

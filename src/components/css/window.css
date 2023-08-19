@@ -46,7 +46,7 @@
 
 .resize {
   position: absolute;
-  z-index: 2;
+  z-index: 100;
   width: 15px;
   height: 15px;
 }

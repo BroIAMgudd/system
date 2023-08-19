@@ -32,3 +32,9 @@ export const deleteLogHandle = (socket, setState, removeLog) => {
     removeLog(deletedLogId);
   });
 };
+
+export const reqLocalListUpdate = (socket) => {
+  socket.on('receiveUser', () => {
+    socket.emit('localLogListUpdate');
+  });
+};

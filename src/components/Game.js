@@ -106,11 +106,22 @@ class Game extends Component {
 
   openClose = (name) => {
     this.setState(prevState => {
-      let winRender = Object.assign({}, prevState.winRender);  // creating copy of state variable jasper
-      winRender[name] = !winRender[name];                     // update the name property, assign a new value                 
-      return { winRender };  
-    })
-  }
+      const updatedWindows = prevState.windows.map(window => {
+        if (window.name === name) {
+          return {
+            ...window,
+            render: !window.render // Set the render property to false for the matched window
+          };
+        }
+        return window;
+      });
+  
+      // Update local storage with the updated windows array
+      localStorage.setItem("windows", JSON.stringify(updatedWindows));
+  
+      return { windows: updatedWindows }; // Update the state with the new windows array
+    });
+  };
 
   getZIndex = (name) => {
     const windows = JSON.parse(localStorage.getItem("windows"));

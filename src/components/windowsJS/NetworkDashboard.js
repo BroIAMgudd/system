@@ -1,6 +1,10 @@
 import React, { Component } from 'react';
 import '../css/NetworkComponent.css';
-import { deleteTaskHandle } from './netHandlers';
+import { 
+  deleteTaskHandle,
+  addTaskHandle,
+  setTasksHandle
+} from './Handlers/netHandlers';
 
 class NetworkDashboard extends Component {
   constructor(props) {
@@ -15,27 +19,22 @@ class NetworkDashboard extends Component {
   }
 
   componentDidMount() {
+    const setState = this.setState.bind(this);
     const { socket } = this.props;
     this.startCountdowns();
-
+    //Remove task from task list
     deleteTaskHandle(socket, this.removeTask);
-  
-    // Listen for socket updates for network processes
-    socket.on('addNetworkProcess', (task) => {
-      this.setState((prevState) => ({
-        networkProcesses: [...prevState.networkProcesses, task],
-        selectedTask: task.id
-      }));
-    });
-
-    socket.on('setNetworkProcesses', (tasks) => {
-      this.setState({ 
-        networkProcesses: [tasks],
-        selectedTask: 0
-      });
-    });
+    //Add task to task list
+    addTaskHandle(socket, setState);
+    //Set task list
+    setTasksHandle(socket, setState);
   }
   
+  componentWillUnmount() {
+    clearInterval(this.countdownInterval);
+  }
+
+  //Remove from process time/Add to online time
   startCountdowns = () => {
     this.countdownInterval = setInterval(() => {
       this.setState(prevState => {
@@ -50,6 +49,7 @@ class NetworkDashboard extends Component {
     }, 1000);
   }
 
+  //Format HH:MM:SS
   formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -73,10 +73,6 @@ class NetworkDashboard extends Component {
     this.setState({
       selectedTask: setID
     })
-  }
-  
-  componentWillUnmount() {
-    clearInterval(this.countdownInterval);
   }
 
   submitTask = (id) => {

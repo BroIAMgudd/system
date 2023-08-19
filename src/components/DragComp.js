@@ -6,38 +6,27 @@ class ResizableComp extends Component {
   constructor(props) {
     super(props);
     this.windowRef = React.createRef();
+    const { name, posX, posY, width, height, zIndex } = this.props.window;
 
     this.state = {
-      name: '',
+      name: name,
       isDragging: false,
       isResizing: false,
       startOffsetX: 0,
       startOffsetY: 0,
       startX: 0,
       startY: 0,
-      width: 200,
-      height: 300,
-      positionX: 0,
-      positionY: 0,
-      zIndex: 0
+      width: width,
+      height: height,
+      positionX: posX,
+      positionY: posY,
+      zIndex: zIndex
     };
   }
 
   componentDidMount() {
     document.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('mouseup', this.handleMouseUp);
-
-    const { name, posX, posY, width, height, zIndex } = this.props.window;
-    const setState = this.setState.bind(this);
-    
-    setState({
-      name: name,
-      posX: posX,
-      posY: posY,
-      width: width,
-      height: height,
-      zIndex: zIndex
-    })
   }
 
   componentWillUnmount() {

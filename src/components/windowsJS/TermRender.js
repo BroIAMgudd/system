@@ -9,7 +9,7 @@ import {
   setPathHandler,
   printHandler,
   whoisHandler
-} from './commandHandlers';
+} from './Handlers/commandHandlers';
 
 class Terminal extends Component {
   constructor(props) {
@@ -85,8 +85,8 @@ class Terminal extends Component {
                 return <td key={index}>{formatTimestamp(timestamp)}</td>;
               } else if (index === 1 && cell.textContent === 'Tor.exe') {
                 return (
-                  <td key={index} onClick={() => this.props.openClose('tor')}>
-                    {cell.textContent}2
+                  <td key={index} onClick={() => this.props.openClose('Tor')}>
+                    {cell.textContent}
                   </td>
                 );
               }

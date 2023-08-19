@@ -64,9 +64,10 @@ class Terminal extends Component {
   isValidIPAddress = isValidIPAddress
 
   print = (output) => {
+  
     this.setState((prevState) => {
       let updatedOutput = [...prevState.output];
-      
+  
       if (typeof output === 'string') {
         // Check if the string represents an HTML table
         const isTable = output.trim().startsWith('<table>');
@@ -77,20 +78,30 @@ class Terminal extends Component {
           const tableDoc = parser.parseFromString(output, 'text/html');
           const tableElement = tableDoc.querySelector('table');
   
-          const formattedTableRows = Array.from(tableElement.querySelectorAll('tr')).map(row => {
+          const formattedTableRows = Array.from(tableElement.querySelectorAll('tr')).map((row, rowIndex) => {
             const formattedCells = Array.from(row.children).map((cell, index) => {
               if (index === row.children.length - 1 && cell.tagName.toLowerCase() === 'td') {
                 const timestamp = new Date(cell.textContent).toString();
-                return `<td>${formatTimestamp(timestamp)}</td>`;
+                return <td key={index}>{formatTimestamp(timestamp)}</td>;
+              } else if (index === 1 && cell.textContent === 'Tor.exe') {
+                return (
+                  <td key={index} onClick={() => this.props.openClose('tor')}>
+                    {cell.textContent}2
+                  </td>
+                );
               }
-              return cell.outerHTML;
+              return <td key={index} dangerouslySetInnerHTML={{ __html: cell.outerHTML }} />;
             });
   
-            return `<tr>${formattedCells.join('')}</tr>`;
+            return <tr key={rowIndex}>{formattedCells}</tr>;
           });
   
-          const formattedTable = `<table>${formattedTableRows.join('')}</table>`;
-          updatedOutput.push({ text: formattedTable });
+          const formattedTable = (
+            <table>
+              <tbody>{formattedTableRows}</tbody>
+            </table>
+          );
+          updatedOutput.push({ jsx: formattedTable });
         } else {
           updatedOutput.push({ text: output });
         }
@@ -100,7 +111,7 @@ class Terminal extends Component {
     }, () => {
       this.promptRef.current.scrollIntoView();
     });
-  };
+  };  
 
   handleRef = () => {
     const promptWidth = this.promptRef.current.offsetWidth;
@@ -126,7 +137,13 @@ class Terminal extends Component {
       <div ref={this.terminalRef} className='terminal'>
         <div className='output'>
           {output.map((item, index) => (
-            <div key={index} className={item.type} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(item.text)}} />
+            <div key={index} className={item.type}>
+              {item.jsx ? (
+                item.jsx
+              ) : (
+                <div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(item.text)}} />
+              )}
+            </div>
           ))}
         </div>
         <div ref={this.promptRef} className="prompt">{path}{'>'}</div>

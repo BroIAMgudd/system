@@ -12,16 +12,73 @@ class Game extends Component {
       network: 5.00,
       harddrive: 5.00,
       usb: 5.00,
-      winRender: {
-        term: true,
-        net: true,
-        log: true,
-        monz: true
-      }
+      windows: [],
+      idk: false
     }
   }
 
   componentDidMount() {
+    const windows = JSON.parse(localStorage.getItem("windows"));
+    const setState = this.setState.bind(this);
+
+    if (windows) {
+      setState({
+        windows: windows
+      });
+    } else {
+      setState({
+        windows: [
+          {
+            render: true,
+            name: 'Terminal',
+            posX: 0,
+            posY: 0,
+            width: 300,
+            height: 200,
+            zIndex: 4
+          },
+          {
+            render: true,
+            name: 'Network Dashboard',
+            posX: 0,
+            posY: 0,
+            width: 300,
+            height: 200,
+            zIndex: 3
+          },
+          {
+            render: true,
+            name: 'Log Manager',
+            posX: 0,
+            posY: 0,
+            width: 300,
+            height: 200,
+            zIndex: 2
+          },
+          {
+            render: true,
+            name: 'Finances',
+            posX: 0,
+            posY: 0,
+            width: 300,
+            height: 200,
+            zIndex: 1
+          },
+          {
+            render: true,
+            name: 'Tor',
+            posX: 0,
+            posY: 0,
+            width: 300,
+            height: 200,
+            zIndex: 0
+          }
+        ]
+      }, () => {
+        localStorage.setItem("windows", JSON.stringify(this.state.windows));
+      });
+    }
+
     // Add event listener for login success and error
     const { socket, id, username } = this.props;
 
@@ -55,13 +112,40 @@ class Game extends Component {
     })
   }
 
+  getZIndex = (name) => {
+    const windows = JSON.parse(localStorage.getItem("windows"));
+    const window = windows.find(window => window.name === name);
+    if (!window) return 0;
+    return window.zIndex;
+  }
+
+  update = () => {
+    this.setState({
+      idk: !this.state.idk
+    });
+  }
+
   render() {
+    const windows = this.state.windows;
+    const elementsToFind = ['Terminal', 'Network Dashboard', 'Log Manager', 'Finances', 'Tor'];
+    const foundWindows = elementsToFind.map(element => windows.find(window => window.name === element));
+    const [term, net, log, monz, tor] = foundWindows;
+    const { socket } = this.props;
+    const getZIndex = this.getZIndex;
+    const openClose = this.openClose;
+    const update = this.update;
+
+    if (!term) {
+      return null;
+    }
+
     return (
       <>
-        {this.state.winRender.term ? <DragComp name='Terminal' short='term' openClose={this.openClose} socket={this.props.socket}/> : null}
-        {this.state.winRender.net ? <DragComp name='Network Dashboard' short='net' openClose={this.openClose} socket={this.props.socket}/> : null}
-        {this.state.winRender.log ? <DragComp name='Log Manager' short='log' openClose={this.openClose} socket={this.props.socket}/> : null}
-        {this.state.winRender.monz ? <DragComp name='Finances' short='monz' openClose={this.openClose} socket={this.props.socket}/> : null}
+        {term.render && <DragComp window={term} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
+        {net.render && <DragComp window={net} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
+        {log.render && <DragComp window={log} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
+        {monz.render && <DragComp window={monz} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
+        {tor.render && <DragComp window={tor} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
       </>
     )
   }

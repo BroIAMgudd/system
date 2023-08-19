@@ -9,10 +9,11 @@ module.exports = function (socket, usersOnline, price) {
       try {
         const [row] = await getWallet(conn, username);
         const wallet = row[0];
+        const walletAmt = parseFloat(wallet.amount);
 
         if (option === 'buy') {
           const buyAmt = parseFloat(input).toFixed(4);
-          let cost = parseFloat(buyAmt * price).toFixed(2);
+          let cost = parseFloat(buyAmt * price);
           let total = 0;
 
           const [bankRows] = await getFinances(conn, username);
@@ -21,11 +22,12 @@ module.exports = function (socket, usersOnline, price) {
           if ( total >= cost ) {
             for (let i = 0; i < bankRows.length; i++) {
               const account = bankRows[i];
-              if (parseFloat(account.amount) <= parseFloat(cost)) {
-                cost = parseFloat(cost) - parseFloat(account.amount);
+              const bankAmt = parseFloat(account.amount);
+              if (bankAmt <= cost) {
+                cost -= bankAmt;
                 updateBankAmt(conn, username, account.ip, 0);
               } else {
-                const newAmt = parseFloat(account.amount) - parseFloat(cost);
+                const newAmt = bankAmt - cost;
                 cost = 0;
                 updateBankAmt(conn, username, account.ip, newAmt);
               }
@@ -36,7 +38,7 @@ module.exports = function (socket, usersOnline, price) {
             newBankRows.forEach(account => { account.showDetails = false; });
             socket.emit('updateBanks', newBankRows);
 
-            const newBtcTotal = (parseFloat(buyAmt)+parseFloat(wallet.amount)).toFixed(4);
+            const newBtcTotal = (buyAmt+walletAmt).toFixed(4);
             updateWallet(conn, username, newBtcTotal);
             socket.emit('updateBtcAmt', newBtcTotal);
             socket.emit('btcInfo', `Bought ${buyAmt} BTC`);
@@ -74,11 +76,11 @@ module.exports = function (socket, usersOnline, price) {
 
           const [row1] = await getWallet(conn, username);
           const wallet = row1[0];
-          if (parseFloat(wallet.amount) >= storeAmt) {
+          if (walletAmt >= storeAmt) {
             const result = genCode(15);
             await createPacket(conn, result, storeAmt);
 
-            const newBtcTotal = (parseFloat(wallet.amount)-parseFloat(storeAmt)).toFixed(4);
+            const newBtcTotal = (walletAmt-parseFloat(storeAmt)).toFixed(4);
             await updateWallet(conn, username, newBtcTotal);
             socket.emit('updateBtcAmt', newBtcTotal);
             socket.emit('btcInfo', `Created Packet for ${storeAmt} BTC => ${result}`);
@@ -90,7 +92,7 @@ module.exports = function (socket, usersOnline, price) {
           const packAmt = await getPacket(conn, code);
 
           if (packAmt) {
-            const newBtcTotal = (parseFloat(wallet.amount)+parseFloat(packAmt)).toFixed(4);
+            const newBtcTotal = (walletAmt+parseFloat(packAmt)).toFixed(4);
             await updateWallet(conn, username, newBtcTotal);
             socket.emit('updateBtcAmt', newBtcTotal);
             socket.emit('btcInfo', `Claimed ${packAmt} BTC`);

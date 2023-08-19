@@ -8,23 +8,36 @@ class ResizableComp extends Component {
     this.windowRef = React.createRef();
 
     this.state = {
-      name: this.props.name,
+      name: '',
       isDragging: false,
       isResizing: false,
       startOffsetX: 0,
       startOffsetY: 0,
       startX: 0,
       startY: 0,
-      width: 300,
-      height: 200,
+      width: 200,
+      height: 300,
       positionX: 0,
       positionY: 0,
+      zIndex: 0
     };
   }
 
   componentDidMount() {
     document.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('mouseup', this.handleMouseUp);
+
+    const { name, posX, posY, width, height, zIndex } = this.props.window;
+    const setState = this.setState.bind(this);
+    
+    setState({
+      name: name,
+      posX: posX,
+      posY: posY,
+      width: width,
+      height: height,
+      zIndex: zIndex
+    })
   }
 
   componentWillUnmount() {
@@ -37,11 +50,38 @@ class ResizableComp extends Component {
     const rect = event.currentTarget.getBoundingClientRect();
     const offsetX = event.clientX - rect.left;
     const offsetY = event.clientY - rect.top;
+  
+    // Retrieve windows from local storage
+    const windows = JSON.parse(localStorage.getItem("windows"));
+  
+    // Get the current window's name from state
+    const currentWindowName = this.state.name;
+  
+    // Find the current window in the array
+    const currentWindow = windows.find((window) => window.name === currentWindowName);
 
+    const maxZIndex = Math.max(...windows.map((window) => window.zIndex || 0));
+  
+    // Lower the zIndex for other windows greater than the current window's zIndex
+    windows.forEach((window) => {
+      if (window.name !== currentWindowName && window.zIndex > currentWindow.zIndex) {
+        window.zIndex--;
+      }
+    });
+
+    currentWindow.zIndex = maxZIndex;
+
+    // Update the windows array in local storage
+    localStorage.setItem("windows", JSON.stringify(windows));
+
+    // Update the state to initiate dragging
     this.setState({
+      zIndex: maxZIndex, 
       isDragging: true,
       startOffsetX: offsetX,
       startOffsetY: offsetY,
+    }, () => {
+      this.props.update();
     });
   };
 
@@ -128,15 +168,34 @@ class ResizableComp extends Component {
   };
 
   handleMouseUp = () => {
+    const { name, positionX, positionY, width, height } = this.state;
+    const windows = JSON.parse(localStorage.getItem("windows"));
+
+    const updatedWindows = windows.map(window => {
+      if (window.name === name) {
+        return {
+          ...window,
+          posX: positionX,
+          posY: positionY,
+          width: width,
+          height: height
+        };
+      }
+      return window;
+    });
+
+    localStorage.setItem("windows", JSON.stringify(updatedWindows));
+
     this.setState({
       isDragging: false,
-      isResizing: false,
+      isResizing: false
     });
   };
 
   render() {
-    const { positionX, positionY, width, height, name } = this.state;
-    const { openClose, short, socket } = this.props;
+    const { name, positionX, positionY, width, height } = this.state;
+    const { openClose, socket } = this.props;
+    const zIndex = this.props.getZIndex(name);
 
     return (
       <div
@@ -146,6 +205,7 @@ class ResizableComp extends Component {
           transform: `translate(${positionX}px, ${positionY}px)`,
           width: `${width}px`,
           height: `${height}px`,
+          zIndex: zIndex
         }}
       >
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.2/css/all.css"></link>
@@ -177,11 +237,11 @@ class ResizableComp extends Component {
           <div className="buttons-container">
             <i className="minimize fa-solid fa-window-minimize" onClick={() => this.props.minimize(this.props.short)}></i>
             <i className="maximize fa-solid fa-window-restore fa-lg" onClick={() => this.props.maximize(this.props.short)}></i>
-            <i className="close fa-solid fa-xmark fa-lg" onClick={() => openClose(short)}></i>
+            <i className="close fa-solid fa-xmark fa-lg" onClick={() => openClose(name)}></i>
           </div>
         </div>
         <div className="content">
-          <WindowRenderer name={name} socket={socket}/>
+          <WindowRenderer name={name} openClose={this.props.openClose} socket={socket}/>
         </div>
       </div>
     );

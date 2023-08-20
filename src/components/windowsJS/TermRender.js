@@ -22,7 +22,7 @@ class Terminal extends Component {
       nick: 'Anon',
       path: 'C:\\Anon',
       os: 'windows',
-      input: '',
+      
       output: [],
       rmWidth: 0
     };
@@ -64,7 +64,6 @@ class Terminal extends Component {
   isValidIPAddress = isValidIPAddress
 
   print = (output) => {
-  
     this.setState((prevState) => {
       let updatedOutput = [...prevState.output];
   

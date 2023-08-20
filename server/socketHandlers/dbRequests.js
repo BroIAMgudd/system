@@ -272,5 +272,7 @@ module.exports = {
   deleteFile,
   transfer,
   addLog,
-  addTask
+  addTask,
+  rmTask,
+  getStats
 };

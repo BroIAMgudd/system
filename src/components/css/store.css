@@ -1,0 +1,27 @@
+.store-area {
+  padding: 0, 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.display {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.lap-book {
+  display: inherit;
+  border: 1px solid azure;
+  border-radius: 4px;
+  padding: 5px;
+  width: 150px;
+}
+
+.store-buy {
+  margin: 0px 5px;
+  color: azure;
+  background-color: #0275d8;
+  border-color: #0275d8;
+  border-radius: 4px;
+}

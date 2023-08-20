@@ -1,0 +1,26 @@
+.search-area {
+  padding: 5px 10px;
+}
+
+.search-arrow {
+  position: relative;
+  left: 10px;
+}
+
+.search-area .input {
+  position: relative;
+  width: 67.5%;
+  left: 15px;
+  top: -3.5px;
+  font-size: 12.5px;
+}
+
+.search-heart {
+  position: relative;
+  left: 20px;
+}
+
+.search-user {
+  position: relative;
+  left: 30px;
+}

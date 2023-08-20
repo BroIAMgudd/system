@@ -1,149 +1,101 @@
 const pool = require('./mysqlPool');
+const {
+  bankBuy,
+  getFinances, 
+  updateBankAmt,
+  getPrimary,
+  getWallet,
+  updateWallet,
+  createPacket,
+  getPacket
+} = require('./Functions/Finances');
 
 module.exports = function (socket, usersOnline, price) {
   socket.on('btcRequest', async (data) => {
     try {
       const { username } = usersOnline[socket.id];
       const { option, input } = data;
-      const conn = await pool.getConnection();
-      try {
-        const [row] = await getWallet(conn, username);
-        const wallet = row[0];
-        const walletAmt = parseFloat(wallet.amount);
 
-        if (option === 'buy') {
-          const buyAmt = parseFloat(input).toFixed(4);
-          let cost = parseFloat(buyAmt * price);
-          let total = 0;
+      const [row] = await getWallet(username);
+      const wallet = row[0];
+      const walletAmt = parseFloat(wallet.amount);
 
-          const [bankRows] = await getFinances(conn, username);
-          bankRows.forEach(account => { total += parseFloat(account.amount); });
+      if (option === 'buy') {
+        const buyAmt = parseFloat(input).toFixed(4);
+        let cost = parseFloat(buyAmt * price);
+        let total = 0;
 
-          if ( total >= cost ) {
-            for (let i = 0; i < bankRows.length; i++) {
-              const account = bankRows[i];
-              const bankAmt = parseFloat(account.amount);
-              if (bankAmt <= cost) {
-                cost -= bankAmt;
-                updateBankAmt(conn, username, account.ip, 0);
-              } else {
-                const newAmt = bankAmt - cost;
-                cost = 0;
-                updateBankAmt(conn, username, account.ip, newAmt);
-              }
-              if (cost === 0) { break; }
-            }
+        const [bankRows] = await getFinances(username);
+        bankRows.forEach(account => { total += parseFloat(account.amount); });
 
-            const [newBankRows] = await getFinances(conn, username);
-            newBankRows.forEach(account => { account.showDetails = false; });
-            socket.emit('updateBanks', newBankRows);
+        if ( total >= cost ) {
+          await bankBuy(username, bankRows, cost);
 
-            const newBtcTotal = (buyAmt+walletAmt).toFixed(4);
-            updateWallet(conn, username, newBtcTotal);
-            socket.emit('updateBtcAmt', newBtcTotal);
-            socket.emit('btcInfo', `Bought ${buyAmt} BTC`);
-          } else {
-            socket.emit('btcInfo', 'Not Enough Mon Monz');
-          }
-        } else if (option === 'sell') {
-          const sellAmt = parseFloat(input).toFixed(4);
-          const money = (sellAmt * price).toFixed(2);
+          const [newBankRows] = await getFinances(username);
+          newBankRows.forEach(account => { account.showDetails = false; });
+          socket.emit('updateBanks', newBankRows);
 
-          const [row1] = await getWallet(conn, username);
-          const wallet = row1[0];
-          if (parseFloat(wallet.amount) >= sellAmt) {
-            const [row2] = await getPrimary(conn, username);
-            const ip = row2[0].ip;
-            const amt = row2[0].amount;
-            const newBankAmt = parseFloat(money) + parseFloat(amt);
-
-            await updateBankAmt(conn, username, ip, newBankAmt.toFixed(2));
-
-            const [bankRows] = await getFinances(conn, username);
-            bankRows.forEach(account => { account.showDetails = false; });
-            socket.emit('updateBanks', bankRows);
-
-            const newBtcTotal = (parseFloat(wallet.amount)-parseFloat(sellAmt)).toFixed(4);
-            await updateWallet(conn, username, newBtcTotal);
-            socket.emit('updateBtcAmt', newBtcTotal);
-            socket.emit('btcInfo', `Sold ${sellAmt} BTC`);
-          } else {
-            socket.emit('btcInfo', `Not enough BTC`);
-          }
-
-        } else if (option === 'create') {
-          const storeAmt = parseFloat(input).toFixed(4);
-
-          const [row1] = await getWallet(conn, username);
-          const wallet = row1[0];
-          if (walletAmt >= storeAmt) {
-            const result = genCode(15);
-            await createPacket(conn, result, storeAmt);
-
-            const newBtcTotal = (walletAmt-parseFloat(storeAmt)).toFixed(4);
-            await updateWallet(conn, username, newBtcTotal);
-            socket.emit('updateBtcAmt', newBtcTotal);
-            socket.emit('btcInfo', `Created Packet for ${storeAmt} BTC => ${result}`);
-          } else {
-            socket.emit('btcInfo', `Not enoughs BTC`);
-          }
-        } else if (option === 'redeem') {
-          const code = input.trim();
-          const packAmt = await getPacket(conn, code);
-
-          if (packAmt) {
-            const newBtcTotal = (walletAmt+parseFloat(packAmt)).toFixed(4);
-            await updateWallet(conn, username, newBtcTotal);
-            socket.emit('updateBtcAmt', newBtcTotal);
-            socket.emit('btcInfo', `Claimed ${packAmt} BTC`);
-          } else {
-            socket.emit('btcInfo', 'Packet has Expired');
-          }
+          const newBtcTotal = (parseFloat(buyAmt) + walletAmt).toFixed(4);
+          updateWallet(username, newBtcTotal);
+          socket.emit('updateBtcAmt', newBtcTotal);
+          socket.emit('btcInfo', `Bought ${buyAmt} BTC`);
+        } else {
+          socket.emit('btcInfo', 'Not Enough Mon Monz');
         }
+      } else if (option === 'sell') {
+        const sellAmt = parseFloat(input);
+        const money = parseFloat((sellAmt * price).toFixed(2));
 
-      } finally {
-        conn.release();
+        if (walletAmt >= sellAmt) {
+          const primary = await getPrimary(username);
+          const newBankAmt = (money + parseFloat(primary.amount)).toFixed(2);
+
+          await updateBankAmt(username, primary.ip, newBankAmt);
+
+          const [bankRows] = await getFinances(username);
+          bankRows.forEach(account => { account.showDetails = false; });
+          socket.emit('updateBanks', bankRows);
+
+          const newBtcTotal = (walletAmt-sellAmt).toFixed(4);
+          await updateWallet(username, newBtcTotal);
+          socket.emit('updateBtcAmt', newBtcTotal);
+          socket.emit('btcInfo', `Sold ${sellAmt.toFixed(4)} BTC`);
+        } else {
+          socket.emit('btcInfo', `Not enough BTC`);
+        }
+      } else if (option === 'create') {
+        const storeAmt = parseFloat(input);
+
+        if (walletAmt >= storeAmt && storeAmt > 0) {
+          const newBtcTotal = (walletAmt-storeAmt).toFixed(4);
+          const result = genCode(15);
+
+          await updateWallet(username, newBtcTotal);
+          await createPacket(result, storeAmt);
+
+          socket.emit('updateBtcAmt', newBtcTotal);
+          socket.emit('btcInfo', `Created Packet for ${storeAmt.toFixed(4)} BTC => ${result}`);
+        } else {
+          socket.emit('btcInfo', `Not enoughs BTC`);
+        }
+      } else if (option === 'redeem') {
+        const code = input.trim();
+        const packAmt = await getPacket(code);
+
+        if (packAmt) {
+          const newBtcTotal = (walletAmt+parseFloat(packAmt)).toFixed(4);
+          await updateWallet(username, newBtcTotal);
+          socket.emit('updateBtcAmt', newBtcTotal);
+          socket.emit('btcInfo', `Claimed ${packAmt} BTC`);
+        } else {
+          socket.emit('btcInfo', 'Packet has Expired');
+        }
       }
     } catch (err) {
       throw err;
     }
   });
 };
-
-async function getFinances(conn, username) {
-  return conn.query('SELECT * FROM finances WHERE username = ?', [username]);
-}
-
-async function getPrimary(conn, username) {
-  return conn.query('SELECT * FROM finances WHERE username = ? AND mainAcc = 1', [username]);
-}
-
-async function getWallet(conn, username) {
-  return conn.query('SELECT * FROM btcwallet WHERE username = ?', [username]);
-}
-
-async function updateWallet(conn, username, amt) {
-  return conn.query('UPDATE btcwallet SET amount = ? WHERE username = ?', [amt, username]);
-}
-
-async function updateBankAmt(conn, username, ip, amt) {
-  return conn.query('UPDATE finances SET amount = ? WHERE username = ? AND ip = ?', [amt, username, ip]);
-}
-
-async function createPacket(conn, code, amount) {
-  return conn.query('INSERT INTO btcpackets (code, amount) VALUES (?, ?)', [code, amount]);
-}
-
-async function getPacket(conn, code) {
-  const [row] = await conn.query('SELECT * FROM btcpackets WHERE code = ?', [code]);
-  const packet = row[0];
-  if (packet.expired === 0) {
-    await conn.query('UPDATE btcpackets SET expired = ? WHERE code = ?', [1, code]);
-    return packet.amount;
-  } else {
-    return false;
-  }
-}
 
 function genCode(length) {
   let result = '';

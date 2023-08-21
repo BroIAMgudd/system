@@ -200,7 +200,7 @@ async function addLog(targetIP, loggedIP, actionType, extraDetails, usersOnline,
   }
 }
 
-async function addTask(taskType, file, user, targetIP, socket) {
+async function addFileTask(taskType, file, user, targetIP, socket) {
   try {
     const { username } = user;
     const { id, filename, ext, size, path } = file;
@@ -228,6 +228,37 @@ async function addTask(taskType, file, user, targetIP, socket) {
         targetIP: targetIP,
         path: path,
         duration: timer, // Duration in seconds
+        taskid: result.insertId
+      });
+
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function addCrackTask(socket, username, targetIP, crc, speed) {
+  try {
+    const conn = await pool.getConnection();
+    try {
+      const { id, filename, ext, path } = crc;
+      const timer = Math.max(Math.round(speed), 5);
+
+      const endDate = addSeconds(Date.now(), timer);
+      const [result] = await conn.query('INSERT INTO tasks (targetID, username, filename, ext, targetIP, path, actionType, endTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+        [id, username, filename, ext, targetIP, path, 'Crack', endDate]
+      );
+
+      socket.emit('addNetworkProcess', {
+        id: id,
+        actionType: 'Crack',
+        filename: filename,
+        ext: ext,
+        targetIP: targetIP,
+        path: path,
+        duration: timer,
         taskid: result.insertId
       });
 
@@ -272,7 +303,8 @@ module.exports = {
   deleteFile,
   transfer,
   addLog,
-  addTask,
+  addFileTask,
   rmTask,
-  getStats
+  getStats,
+  addCrackTask
 };

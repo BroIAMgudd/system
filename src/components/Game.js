@@ -72,6 +72,15 @@ class Game extends Component {
             width: 300,
             height: 200,
             zIndex: 0
+          },
+          {
+            render: true,
+            name: 'IPList',
+            posX: 0,
+            posY: 0,
+            width: 300,
+            height: 200,
+            zIndex: 0
           }
         ]
       }, () => {
@@ -125,8 +134,8 @@ class Game extends Component {
 
   getZIndex = (name) => {
     const windows = JSON.parse(localStorage.getItem("windows"));
+    if (!windows) return 0;
     const window = windows.find(window => window.name === name);
-    if (!window) return 0;
     return window.zIndex;
   }
 
@@ -138,9 +147,9 @@ class Game extends Component {
 
   render() {
     const windows = this.state.windows;
-    const elementsToFind = ['Terminal', 'Network Dashboard', 'Log Manager', 'Finances', 'Tor'];
+    const elementsToFind = ['Terminal', 'Network Dashboard', 'Log Manager', 'Finances', 'Tor', 'IPList'];
     const foundWindows = elementsToFind.map(element => windows.find(window => window.name === element));
-    const [term, net, log, monz, tor] = foundWindows;
+    const [term, net, log, monz, tor, ips] = foundWindows;
     const { socket } = this.props;
     const getZIndex = this.getZIndex;
     const openClose = this.openClose;
@@ -157,6 +166,7 @@ class Game extends Component {
         {log.render && <DragComp window={log} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
         {monz.render && <DragComp window={monz} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
         {tor.render && <DragComp window={tor} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
+        {ips.render && <DragComp window={ips} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
       </>
     )
   }

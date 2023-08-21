@@ -15,6 +15,11 @@
   font-size: 12.5px;
 }
 
+.search-area .input:hover {
+  background: darkorange;
+  color: black;
+}
+
 .search-heart {
   position: relative;
   left: 20px;

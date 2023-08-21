@@ -35,7 +35,7 @@ class LogViewer extends Component {
     remotelLogUpdate(socket, setState);
 
     //Remove Logs
-    deleteLogHandle(socket, setState, this.removeLog);
+    deleteLogHandle(socket, this.removeLog);
   }
 
   //Send delete log event

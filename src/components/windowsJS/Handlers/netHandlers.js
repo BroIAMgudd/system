@@ -4,7 +4,7 @@ export const deleteTaskHandle = (socket, removeTask) => {
   });
 };
 
-export const addTaskHandle = (socket, setState) => {
+export const addFileTaskHandle = (socket, setState) => {
   socket.on('addNetworkProcess', (task) => {
     setState((prevState) => ({
       networkProcesses: [...prevState.networkProcesses, task],

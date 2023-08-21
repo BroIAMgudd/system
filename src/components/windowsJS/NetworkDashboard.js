@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import '../css/NetworkComponent.css';
 import { 
   deleteTaskHandle,
-  addTaskHandle,
+  addFileTaskHandle,
   setTasksHandle
 } from './Handlers/netHandlers';
 
@@ -25,7 +25,7 @@ class NetworkDashboard extends Component {
     //Remove task from task list
     deleteTaskHandle(socket, this.removeTask);
     //Add task to task list
-    addTaskHandle(socket, setState);
+    addFileTaskHandle(socket, setState);
     //Set task list
     setTasksHandle(socket, setState);
   }

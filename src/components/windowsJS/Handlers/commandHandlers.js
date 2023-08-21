@@ -57,6 +57,13 @@ export const processCommand = (path, args, socket, print, setState) => {
         print(`Invalid target IP Address: ${params[0]}`);
       }
     },
+    'crack': (params) => {
+      if (isValidIPAddress(params[0])) {
+        socket.emit('crack', { targetIP: params[0] });
+      } else {
+        print(`Invalid target IP Address: ${params[0]}`);
+      }
+    },
     'exit': () => {
       socket.emit('exit');
     },

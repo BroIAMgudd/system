@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { getFile, addTask } = require('./dbRequests');
+const { getFile, addFileTask } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('transfer', async (data) => {
@@ -28,7 +28,7 @@ module.exports = function (socket, usersOnline, io) {
         break lable;
       }
 
-      addTask(taskType, rows[0], user, connTo, socket);
+      addFileTask(taskType, rows[0], user, connTo, socket);
     } catch (error) {
       console.error('Upload Error:', error.message);
       socket.emit('print', { msg: 'An error occurred during file upload.' });

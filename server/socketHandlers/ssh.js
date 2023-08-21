@@ -25,12 +25,34 @@ module.exports = function (socket, usersOnline, io) {
       }
 
       const conn = await pool.getConnection();
-      try {
+      ssh: try {
+        
         const nick = await getTargetUserInfo(conn, targetIp);
 
         if (nick) {
+          const [ipQuery] = await conn.query('SELECT ips FROM iplist WHERE username = ?', [user.username]);
+          const ipList = JSON.parse(String(ipQuery[0].ips));
+          let ipAddressFound = false;
+
+          for (const key in ipList) {
+            if (ipList[key].includes(targetIp)) {
+              ipAddressFound = true;
+              break;
+            }
+          }
+
+          console.log(ipAddressFound);
+
+          if (!ipAddressFound) {
+            await addLog(targetIp, user.ip, 'Blocked Connection', null, usersOnline, io);
+            socket.emit('print', { msg: 'Connection Failed and attempt logged' });
+            break ssh;
+          }
+
+          //TODO: check for firewall
+
           user.connTo = targetIp; // Update the connection info
-          user.path = nick; // Update the user's path to the root of the connected target
+          user.path = nick;
           const auth = 'Authentication'
           //           targetIP, loggedIP, actionType, extraDetails
           await addLog(targetIp, user.ip, auth, null, usersOnline, io);

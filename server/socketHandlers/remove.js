@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { addTask } = require('./dbRequests');
+const { addFileTask } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('rm', async (data) => {
@@ -25,7 +25,7 @@ module.exports = function (socket, usersOnline, io) {
         break label;
       }
 
-      addTask('Remove', rows[0], usersOnline[socket.id], targetIP, socket);
+      addFileTask('Remove', rows[0], usersOnline[socket.id], targetIP, socket);
     } catch (error) {
       console.error('Remove Error:', error.message);
       socket.emit('print', { msg: 'An error occurred while removing the file.' });

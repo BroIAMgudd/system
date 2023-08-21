@@ -3,7 +3,7 @@ const http = require('http');
 const socketIO = require('socket.io');
 const cors = require('cors');
 const { uptime } = require('process');
-
+// UPDATE `iplist` SET `ips`= JSON_ARRAY_APPEND(`ips`, '$.NPC', '2.2.2.2') WHERE `id` = 1;
 const app = express();
 app.use(cors());
 const server = http.createServer(app);
@@ -23,6 +23,7 @@ const getFinancesH = require('./socketHandlers/getFinances');
 const btcRequestH = require('./socketHandlers/btcRequest');
 const removeLogH = require('./socketHandlers/rmLog');
 const sshH = require('./socketHandlers/ssh');
+const crackH = require('./socketHandlers/crack');
 const cdH = require('./socketHandlers/changeDir');
 const exitH = require('./socketHandlers/exit');
 const whoisH = require('./socketHandlers/whois');
@@ -52,6 +53,7 @@ io.on('connection', (socket) => {
   btcRequestH(socket, usersOnline, btcPrice);
   removeLogH(socket, usersOnline, io);
   sshH(socket, usersOnline, io);
+  crackH(socket, usersOnline);
   cdH(socket, usersOnline);
   exitH(socket, usersOnline);
   whoisH(socket, usersOnline);

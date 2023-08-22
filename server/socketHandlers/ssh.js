@@ -1,109 +1,86 @@
 const pool = require('./mysqlPool');
-const { isValidIPAddress, listLogs } = require('./helper');
-const { addLog } = require('./dbRequests');
+const { isValidIPAddress, findUser } = require('./helper');
+const { listLogs, addLog } = require('./Functions/Logs');
+const { findSystem } = require('./Functions/System');
+const { getIPList, findIPFromList } = require('./Functions/ipList');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('ssh', async (data) => {
-    if (!usersOnline[socket.id]) {
-      socket.disconnect();
-      return;
-    }
+    const user = findUser(usersOnline, 'id', socket.id);
+    if (!user) { socket.disconnect(); return; }
 
-    const { targetIp } = data;
-
-    if (!isValidIPAddress(targetIp)) {
+    if (!isValidIPAddress(data.targetIP)) {
       socket.emit('print', { msg: 'Invalid target IP address.' });
       return;
     }
 
-    lable: try {
-      const user = usersOnline[socket.id];
+    target: try {
+      const { username, ip } = user;
+      const { targetIP } = data;
 
-      if (targetIp === user.ip) {
+      if (targetIP === ip) {
         socket.emit('print', { msg: "Why travel far when you're already here?" });
-        break lable;
+        break target;
       }
 
       const conn = await pool.getConnection();
       ssh: try {
-        
-        const nick = await getTargetUserInfo(conn, targetIp);
+        const { nick } = await findSystem(conn, 'ip', targetIP);
 
-        if (nick) {
-          const [ipQuery] = await conn.query('SELECT ips FROM iplist WHERE username = ?', [user.username]);
-          const ipList = JSON.parse(String(ipQuery[0].ips));
-          let ipAddressFound = false;
-
-          for (const key in ipList) {
-            if (ipList[key].includes(targetIp)) {
-              ipAddressFound = true;
-              break;
-            }
-          }
-
-          let blocked = false;
-          let reason = '';
-
-          if (!ipAddressFound) {
-            blocked = true;
-            reason = 'Password has not been cracked';
-          }
-
-          if (!blocked) {
-            blocked = await firewall(conn,  user.ip, targetIp);
-            if (blocked) { reason = 'Bypass script not found'; }
-          }
-
-          if (blocked) {
-            let hasProtection = false;
-            if (hasProtection) {
-              socket.emit('print', { msg: `Connection Forceably Haulted: ${reason}` });
-            } else {
-              await addLog(targetIp, user.ip, 'Blocked Connection', null, usersOnline, io);
-              socket.emit('print', { msg: `Connection Failed and attempt logged: ${reason}` });
-            }
-            break ssh;
-          }
-
-          user.connTo = targetIp; // Update the connection info
-          user.path = nick;
-          const auth = 'Authentication'
-          //           targetIP, loggedIP, actionType, extraDetails
-          await addLog(targetIp, user.ip, auth, null, usersOnline, io);
-          await addLog(user.ip, targetIp, auth, null, usersOnline, io);
-
-          const remoteLogs = await listLogs(conn, targetIp);
-          let logs = [];
-          remoteLogs.forEach(row => {
-            logs.unshift({
-              id: row.id,
-              actionType: row.actionType,
-              extraDetails: row.extraDetails,
-              loggedIP: row.loggedIP,
-              timestamp: row.timestamp,
-            });
-          });
-          socket.emit('remoteLogListUpdate', logs);
-
-          socket.emit('setPath', { path: `C:\\${nick}` });
-          socket.emit('print', { msg: `Connected to IP: ${targetIp}` });
-        } else {
-          socket.emit('print', { msg: `Target IP not found: ${targetIp}` });
+        if (!nick) {
+          socket.emit('print', { msg: `Target IP not found: ${targetIP}` });
+          break ssh;
         }
+        
+        const ipList = getIPList(conn, username);
+        let ipAddressFound = findIPFromList(ipList, targetIP);
+
+        let blocked = false;
+        let reason = '';
+
+        if (!ipAddressFound) {
+          blocked = true;
+          reason = 'Password has not been cracked';
+        } else {
+          blocked = await firewall(conn, user.ip, targetIP);
+          if (blocked) { reason = 'Bypass script not found'; }
+        }
+
+        if (blocked) {
+          let hasProtection = false; //TODO: Implement protection software
+
+          if (hasProtection) {
+            socket.emit('print', { msg: `Connection Forceably Haulted: ${reason}` });
+          } else {
+            addLog(conn, targetIP, user.ip, 'Blocked Connection', null, usersOnline, io);
+            socket.emit('print', { msg: `Connection Failed and attempt logged: ${reason}` });
+          }
+
+          break ssh;
+        }
+
+
+        user.connTo = targetIP;
+        user.path = nick;
+        //           targetIP, loggedIP, actionType, extraDetails
+        addLog(conn, targetIP, ip, 'Authentication', null, usersOnline, io);
+        addLog(conn, ip, targetIP, 'Authentication', null, usersOnline, io);
+
+        const remoteLogs = await listLogs(conn, targetIP);
+
+        socket.emit('remoteLogListUpdate', remoteLogs);
+        socket.emit('setPath', { path: `C:\\${nick}` });
+        socket.emit('print', { msg: `Connected to IP: ${targetIP}` });
       } finally {
         conn.release();
       }
     } catch (err) {
+      console.error('SSH Error:', err.message);
       socket.emit('print', { msg: 'An error occurred while connecting.' });
       throw err;
     }
   });
 };
-
-async function getTargetUserInfo(conn, targetIp) {
-  const [targetUser] = await conn.query('SELECT nick FROM system WHERE ip = ?', [targetIp]);
-  return targetUser.length === 1 ? targetUser[0].nick : null;
-}
 
 async function firewall(conn, ip, targetIP) {
   const [firewalls] = await conn.query('SELECT * FROM filesystem WHERE ext = ? AND ip = ?', ['fwl', targetIP]);

@@ -1,40 +1,43 @@
+const { parsePath, isValidPath } = require('./helper');
+const { getFile } = require('./Functions/Filesystem');
+const { findSystem } = require('./Functions/System');
+const { addLog } = require('./Functions/Logs');
+const { findUser } = require('./helper');
 const pool = require('./mysqlPool');
-const { parsePath, isValidPath, addLog } = require('./helper');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('move', async (data) => {
+    const user = findUser(usersOnline, 'id', socket.id);
+    if (!user) { socket.disconnect(); return; }
+
     const { fileInfo, updatePath, search } = data;
-    const { ip, connTo, path, nick } = usersOnline[socket.id];
-    const targetip = (connTo === '') ? ip : connTo;
-    let targetnick;
+    const { ip, connTo, path, nick } = user;
+    const targetIP = (connTo === '') ? ip : connTo;
+    let targetNick;
+    
     const conn = await pool.getConnection();
 
-    lable: try {
-      if (connTo) {
-        const [row] = await conn.query('SELECT nick FROM system WHERE ip = ?', [ip]);
-        targetnick = row.nick;
-      } else {
-        targetnick = nick;
+    move: try {
+      const targetSys = await findSystem(conn, 'ip', targetIP);
+
+      if (!targetSys) {
+        socket.emit('print', { msg: 'Target user changed IP' });
+        break move;
       }
+
+      const targetNick = targetSys.nick;
     
-      let sql = '';
-      if (search === 'id') {
-        sql = 'SELECT filename, ext FROM filesystem WHERE id = ? AND ip = ? AND path = ?'
-      } else {
-        sql = 'SELECT filename, ext FROM filesystem WHERE filename = ? AND ip = ? AND path = ?'
-      }
-
-      const [currentPathRow] = await conn.query(sql, [fileInfo, targetip, path]);
+      const fileRows = await getFile(conn, search, fileInfo, targetIP, path);
       
-      if (currentPathRow === 0) {
-        socket.emit('print', { msg: 'You need to be in current directory of the file you are moving' });
-        break lable;
-      } else if (currentPathRow > 1) {
+      if (!fileRows) {
+        socket.emit('print', { msg: 'File not found.' });
+        break move;
+      } else if (fileRows.length > 1) {
         socket.emit('print', { msg: 'Multiple files with same name use moveid' });
-        break lable;
+        break move;
       }
 
-      const { filename, ext } = currentPathRow[0];
+      const { filename, ext } = fileRows[0];
     
       const newPath = parsePath(
         path,
@@ -43,42 +46,41 @@ module.exports = function (socket, usersOnline, io) {
     
       if (!newPath) {
         socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${updatePath}` });
-        break lable;
+        break move;
       }
 
-      if (await isValidPath(targetnick, targetip, newPath)) {
-        const [findDupFolder] = await conn.query('SELECT * FROM filesystem WHERE filename = ? AND ip = ? AND path = ?', [filename, targetip, newPath]);
-        if (findDupFolder.length === 1) {
-          socket.emit('print', { msg: 'Folder with same name already exists' });
-          break lable;
-        }
-        const oldFilePath = `${path}/${filename}`;
-        const newFilePath = `${newPath}/${filename}`;
+      const validPath = await isValidPath(targetNick, targetIP, newPath);
+      if (!validPath) { socket.emit('print', { msg: `Invalid path: ${path}` }); }
 
-        if (`${newPath}/`.includes(`${oldFilePath}/`)) {
-          socket.emit('print', { msg: 'Cant move a folder into itself' });
-          break lable;
-        } 
-        await conn.query('UPDATE filesystem SET path = ? WHERE filename = ? AND ip = ?', [newPath, filename, targetip]);
-        if (ext === 'folder') {
-          await conn.query('UPDATE filesystem SET path = REPLACE(path, ?, ?) WHERE ip = ? AND path LIKE ?', [oldFilePath, newFilePath, targetip, `${oldFilePath}%`]);
-          socket.emit('print', { msg: `Moved folder ${filename}` });
-        } else {
-          socket.emit('print', { msg: `Moved file ${filename}` });
-        }
-  
-        const actionType = (ext === 'folder') ? 'Moved Folder' : 'Moved File';
-        const fileName = (ext === 'folder') ? filename : `${filename}.${ext}`;
-  
-        if (!connTo) {
-          await addLog(ip, ip, actionType, fileName, usersOnline, io);
-        } else {
-          await addLog(targetip, ip, actionType, fileName, usersOnline, io);
-          await addLog(ip, targetip, actionType, fileName, usersOnline, io);
-        }
+      const [findDupFolder] = await conn.query('SELECT * FROM filesystem WHERE filename = ? AND ip = ? AND path = ?', [filename, targetIP, newPath]);
+      if (findDupFolder.length === 1) {
+        socket.emit('print', { msg: 'Folder with same name already exists' });
+        break move;
+      }
+
+      const oldFilePath = `${path}/${filename}`;
+      const newFilePath = `${newPath}/${filename}`;
+      if (`${newPath}/`.includes(`${oldFilePath}/`)) {
+        socket.emit('print', { msg: 'Cant move a folder into itself' });
+        break move;
+      }
+
+      await conn.query('UPDATE filesystem SET path = ? WHERE filename = ? AND ip = ?', [newPath, filename, targetIP]);
+      if (ext === 'folder') {
+        await conn.query('UPDATE filesystem SET path = REPLACE(path, ?, ?) WHERE ip = ? AND path LIKE ?', [oldFilePath, newFilePath, targetIP, `${oldFilePath}%`]);
+        socket.emit('print', { msg: `Moved folder ${filename}` });
       } else {
-        // Handle invalid path
-        socket.emit('print', { msg: `Invalid path: ${path}` });
+        socket.emit('print', { msg: `Moved file ${filename}` });
+      }
+
+      const actionType = (ext === 'folder') ? 'Moved Folder' : 'Moved File';
+      const fileName = (ext === 'folder') ? filename : `${filename}.${ext}`;
+
+      if (!connTo) {
+        addLog(conn, ip, ip, actionType, fileName, usersOnline, io);
+      } else {
+        addLog(conn, targetIP, ip, actionType, fileName, usersOnline, io);
+        addLog(conn, ip, targetIP, actionType, fileName, usersOnline, io);
       }
     } catch (err) {
       console.error('Move Error:', err.message);

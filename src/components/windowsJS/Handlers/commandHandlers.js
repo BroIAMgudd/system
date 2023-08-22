@@ -52,7 +52,7 @@ export const processCommand = (path, args, socket, print, setState) => {
     },
     'ssh': (params) => {
       if (isValidIPAddress(params[0])) {
-        socket.emit('ssh', { targetIp: params[0] });
+        socket.emit('ssh', { targetIP: params[0] });
       } else {
         print(`Invalid target IP Address: ${params[0]}`);
       }

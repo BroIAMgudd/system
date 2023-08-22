@@ -1,9 +1,12 @@
+const { getFile } = require('./Functions/Filesystem');
+const { addFileTask } = require('./dbRequests');
+const { findUser } = require('./helper');
 const pool = require('./mysqlPool');
-const { getFile, addFileTask } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('transfer', async (data) => {
-    const user = usersOnline[socket.id];
+    const user = findUser(usersOnline, 'id', socket.id);
+    if (!user) { socket.disconnect(); return; }
     const { ip, connTo, path, nick } = user;
 
     if (!connTo) {
@@ -16,22 +19,23 @@ module.exports = function (socket, usersOnline, io) {
     const taskType = (type === 'ul') ? 'Upload' : 'Download';
     const conn = await pool.getConnection();
 
-    lable: try {
+    transfer: try {
       const filePath = (type === 'ul') ? nick : path;
-      const [rows] = await getFile(search, fileInfo, sender, filePath);
+      const fileRows = await getFile(conn, search, fileInfo, sender, filePath);
 
-      if (rows.length === 0) {
+      if (!fileRows) {
         socket.emit('print', { msg: 'File not found.' });
-        break lable;
-      } if (rows.length > 1) {
+        break transfer;
+      } if (fileRows.length > 1) {
         socket.emit('print', { msg: 'Multiple files found with that name use file id instead.' });
-        break lable;
+        break transfer;
       }
 
-      addFileTask(taskType, rows[0], user, connTo, socket);
-    } catch (error) {
-      console.error('Upload Error:', error.message);
+      addFileTask(taskType, fileRows[0], user, connTo, socket);
+    } catch (err) {
+      console.error('Upload Error:', err.message);
       socket.emit('print', { msg: 'An error occurred during file upload.' });
+      throw err;
     } finally {
       conn.release();
     }

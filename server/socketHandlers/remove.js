@@ -1,31 +1,29 @@
-const pool = require('./mysqlPool');
+const { getFile } = require('./Functions/Filesystem');
 const { addFileTask } = require('./dbRequests');
+const { findUser } = require('./helper');
+const pool = require('./mysqlPool');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('rm', async (data) => {
-    const { ip, connTo, path } = usersOnline[socket.id];
+    const user = findUser(usersOnline, 'id', socket.id);
+    if (!user) { socket.disconnect(); return; }
+    const { ip, connTo, path } = user;
     const { fileInfo, search } = data;
     
     const targetIP = (!connTo) ? ip : connTo;
     const conn = await pool.getConnection();
-    let rows;
   
-    label: try {
-      if (search === 'id') {
-        [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND id = ?', [targetIP, parseInt(fileInfo)]);
-      } else if (search === 'name') {
-        [rows] = await conn.query('SELECT * FROM filesystem WHERE ip = ? AND filename = ? AND path = ?', [targetIP, fileInfo, path]);
-      }
+    remove: try {
+      const fileRows = await getFile(conn, search, fileInfo, targetIP, path);
 
-      if (rows.length === 0) {
+      if (!fileRows) {
         socket.emit('print', { msg: 'File not found.' });
-        break label;
-      } if (rows.length > 1) {
-        socket.emit('print', { msg: 'Multiple files found with that name use rmid instead.' });
-        break label;
+        break remove;
+      } if (fileRows.length > 1) {
+        socket.emit('print', { msg: 'Multiple files found with that name use file id instead.' });
+        break remove;
       }
-
-      addFileTask('Remove', rows[0], usersOnline[socket.id], targetIP, socket);
+      addFileTask('Remove', fileRows[0], user, targetIP, socket);
     } catch (error) {
       console.error('Remove Error:', error.message);
       socket.emit('print', { msg: 'An error occurred while removing the file.' });

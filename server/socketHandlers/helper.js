@@ -95,16 +95,14 @@ function addSeconds(date, seconds) {
 
 function calcMBSpeed(sizeMB, speed) { return sizeMB * (1 / speed); }
 
-async function listLogs(conn, ip) {
-  try {
-    // Fetch the last 25 local logs of the target IP from the 'logs' table
-    const [logRows] = await conn.query(
-      'SELECT * FROM logs WHERE targetIP = ? ORDER BY id ASC LIMIT 15', [ip] );
-
-    return logRows;
-  } catch (err) {
-    throw err;
+function findUser(usersOnline, search, data) {
+  if (search === 'id') { return (usersOnline[data]) ? usersOnline[data] : null; }
+  for (const socketID in onlineUsers) {
+    if (onlineUsers[socketID][search] === data) {
+      return onlineUsers[socketID];
+    }
   }
+  return null;
 }
 
 module.exports = {
@@ -114,5 +112,5 @@ module.exports = {
   isValidPath,
   addSeconds,
   calcMBSpeed,
-  listLogs
+  findUser
 };

@@ -1,10 +1,7 @@
-// Import required modules and functions
 const pool = require('./mysqlPool');
 const { addCrackTask } = require('./dbRequests');
 
-// Export a function that takes a socket and usersOnline object as parameters
 module.exports = function(socket, usersOnline) {
-  // Set up an event listener for the 'crack' event
   socket.on('crack', async (data) => {
     try {
       const { username, ip } = usersOnline[socket.id];

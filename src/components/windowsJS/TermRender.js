@@ -22,7 +22,7 @@ class Terminal extends Component {
       nick: 'Anon',
       path: 'C:\\Anon',
       os: 'windows',
-      
+      input: '',
       output: [],
       rmWidth: 0
     };

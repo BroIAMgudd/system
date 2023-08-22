@@ -1,5 +1,5 @@
 export const reqIPListHandler = (socket) => {
-  socket.on('receiveUser', () => socket.emit('reqIPList'));
+  socket.on('receiveUser', () => socket.emit('LoadIPs'));
 };
 
 export const setIPListHandler = (socket, setState) => {
@@ -8,7 +8,7 @@ export const setIPListHandler = (socket, setState) => {
 
 export const appendIPHandler = (socket, setState) => {
   socket.on('appendIP', ip => setState((prevState) => (
-    { ips: [ip, ...prevState.ips] }
+    { ipList: [...prevState.ipList, ip] }
   )));
 };
 

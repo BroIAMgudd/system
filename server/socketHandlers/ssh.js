@@ -41,15 +41,29 @@ module.exports = function (socket, usersOnline, io) {
             }
           }
 
-          console.log(ipAddressFound);
+          let blocked = false;
+          let reason = '';
 
           if (!ipAddressFound) {
-            await addLog(targetIp, user.ip, 'Blocked Connection', null, usersOnline, io);
-            socket.emit('print', { msg: 'Connection Failed and attempt logged' });
-            break ssh;
+            blocked = true;
+            reason = 'Password has not been cracked';
           }
 
-          //TODO: check for firewall
+          if (!blocked) {
+            blocked = await firewall(conn,  user.ip, targetIp);
+            if (blocked) { reason = 'Bypass script not found'; }
+          }
+
+          if (blocked) {
+            let hasProtection = false;
+            if (hasProtection) {
+              socket.emit('print', { msg: `Connection Forceably Haulted: ${reason}` });
+            } else {
+              await addLog(targetIp, user.ip, 'Blocked Connection', null, usersOnline, io);
+              socket.emit('print', { msg: `Connection Failed and attempt logged: ${reason}` });
+            }
+            break ssh;
+          }
 
           user.connTo = targetIp; // Update the connection info
           user.path = nick;
@@ -89,4 +103,24 @@ module.exports = function (socket, usersOnline, io) {
 async function getTargetUserInfo(conn, targetIp) {
   const [targetUser] = await conn.query('SELECT nick FROM system WHERE ip = ?', [targetIp]);
   return targetUser.length === 1 ? targetUser[0].nick : null;
+}
+
+async function firewall(conn, ip, targetIP) {
+  const [firewalls] = await conn.query('SELECT * FROM filesystem WHERE ext = ? AND ip = ?', ['fwl', targetIP]);
+  const fwlFound = (firewalls.length > 0) ? true : false;
+  if (!fwlFound) { return false; }
+
+  const [bypassScripts] = await conn.query('SELECT contents FROM filesystem WHERE ext = ? AND ip = ?', ['bypass', ip]);
+  let scriptFound = false;
+  if (bypassScripts.length > 0) {
+    for (const script in bypassScripts) {
+      if (bypassScripts[script].contents === targetIP) {
+        scriptFound = true;
+        break;
+      }
+    }
+  }
+
+  if (scriptFound) { return false; }
+  else { return true; }
 }

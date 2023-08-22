@@ -1,5 +1,5 @@
 const pool = require('./mysqlPool');
-const { deleteFile, transfer } = require('./dbRequests');
+const { deleteFile, transfer, crackIP } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline, io) {
   socket.on('submitTask', async (id) => {
@@ -19,16 +19,26 @@ module.exports = function (socket, usersOnline, io) {
         break submitTask;
       }
 
-      if (actionType === 'Remove') {
-        deleteFile(socket, task, user, usersOnline, io);
-      } else if (actionType === 'Upload' || actionType === 'Download') {
-        transfer(socket, task, user, usersOnline, io);
-      }
+      switch (actionType) {
+        case 'Remove':
+          deleteFile(socket, task, user, usersOnline, io);
+          break;
+        case 'Upload':
+        case 'Download':
+          transfer(socket, task, user, usersOnline, io);
+          break;
+        case 'Crack':
+          crackIP(socket, task, user, usersOnline, io);
+          break;
+        default:
+          console.log('Unknown action:', actionType);
+          break;
+      }      
 
     } catch (error) {
       console.error('Task submit Error:', error.message);
       socket.emit('print', { msg: 'An error occurred while submitting the task' });
-      throw err;
+      throw error;
     } finally {
       conn.release();
     }

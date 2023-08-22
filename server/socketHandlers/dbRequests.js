@@ -24,6 +24,44 @@ async function getFile(searchType, fileInfo, targetIP = null, path = null) {
   }
 }
 
+async function crackIP(socket, task, user, usersOnline, io) {
+  try {
+    const conn = await pool.getConnection();
+    crackIP: try {
+      const { username, ip } = user;
+      const { id, targetID, targetIP } = task;
+      [rows] = await getFile('id', targetID, ip);
+
+      if (rows.length === 0) {
+        socket.emit('print', { msg: 'Crc not found please reinstall application.' });
+        break crackIP;
+      }
+
+      await rmTask(id, socket);
+
+      const [ipQuery] = await conn.query('SELECT username, type FROM system WHERE ip = ?', [targetIP]);
+      const targetType = (ipQuery.length > 0) ? ipQuery[0].type : null;
+      if (!targetType) {
+        socket.emit('print', { msg: 'Target has changed IP' });
+        break crackIP;
+      }
+
+      const [ipListQuery] = await conn.query('SELECT ips FROM iplist WHERE username = ?', [user.username]);
+      const ipList = JSON.parse(String(ipListQuery[0].ips));
+      ipList[targetType].push(targetIP);
+      const newIPList = JSON.stringify(ipList);
+
+      await conn.query('UPDATE iplist SET ips = ? WHERE username = ?', [newIPList, username]);
+      socket.emit('print', { msg: `Cracked ${targetType}: ${targetIP}` });
+      socket.emit('appendIP', {username: ipQuery[0].username, ip: targetIP, type: targetType});
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function deleteFile(socket, task, user, usersOnline, io) {
   try {
     const conn = await pool.getConnection();
@@ -306,5 +344,6 @@ module.exports = {
   addFileTask,
   rmTask,
   getStats,
-  addCrackTask
+  addCrackTask,
+  crackIP
 };

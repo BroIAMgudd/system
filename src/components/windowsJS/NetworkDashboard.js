@@ -69,7 +69,6 @@ class NetworkDashboard extends Component {
 
   selectTask = (id) => {
     const setID = (this.state.selectedTask === id) ? 0 : id
-    console.log(setID);
     this.setState({
       selectedTask: setID
     })

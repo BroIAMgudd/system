@@ -19,6 +19,7 @@ const registerH = require('./socketHandlers/register');
 const loginH = require('./socketHandlers/login');
 const getUserH = require('./socketHandlers/getUser');
 const loadLocalLogsH = require('./socketHandlers/loadLocalLogs');
+const loadIPsH = require('./socketHandlers/loadIPs');
 const getFinancesH = require('./socketHandlers/getFinances');
 const btcRequestH = require('./socketHandlers/btcRequest');
 const removeLogH = require('./socketHandlers/rmLog');
@@ -49,6 +50,7 @@ io.on('connection', (socket) => {
   loginH(socket);
   getUserH(socket, usersOnline);
   loadLocalLogsH(socket, usersOnline);
+  loadIPsH(socket, usersOnline);
   getFinancesH(socket, usersOnline, btcPrice);
   btcRequestH(socket, usersOnline, btcPrice);
   removeLogH(socket, usersOnline, io);

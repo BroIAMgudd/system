@@ -36,7 +36,7 @@ class IPList extends Component {
     const setState = this.setState.bind(this);
     const { socket } = this.props;
 
-    reqIPListHandler(socket);
+    socket.on('receiveUser', () => socket.emit('LoadIPs'));
     setIPListHandler(socket, setState);
     appendIPHandler(socket, setState);
     removeIPHandler(socket, setState, this.removeIP);
@@ -56,7 +56,7 @@ class IPList extends Component {
         <>
           {filteredIPs.map((ip, i) => (
             <tr key={i}>
-              <td> {ip.name} </td>
+              <td> {ip.username} </td>
               <td> {ip.ip} </td>
             </tr>
           ))}
@@ -69,20 +69,28 @@ class IPList extends Component {
   render() {
     return (
       <>
-        <div onClick={() => this.toggleCollapse('npc')} style={{ textAlign: 'center' }}>
+        <div onClick={() => this.toggleCollapse('NPC')} style={{ textAlign: 'center' }}>
           NPC IPs
         </div>
         <table>
           <tbody>
-            {this.renderIPList('npc')}
+            {this.renderIPList('NPC')}
           </tbody>
         </table>
-        <div onClick={() => this.toggleCollapse('player')} style={{ textAlign: 'center' }}>
+        <div onClick={() => this.toggleCollapse('Player')} style={{ textAlign: 'center' }}>
           Player IPs
         </div>
         <table>
           <tbody>
-            {this.renderIPList('player')}
+            {this.renderIPList('Player')}
+          </tbody>
+        </table>
+        <div onClick={() => this.toggleCollapse('Server')} style={{ textAlign: 'center' }}>
+          Server IPs
+        </div>
+        <table>
+          <tbody>
+            {this.renderIPList('Server')}
           </tbody>
         </table>
       </>

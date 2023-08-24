@@ -6,7 +6,7 @@ class ResizableComp extends Component {
   constructor(props) {
     super(props);
     this.windowRef = React.createRef();
-    const { name, posX, posY, width, height, zIndex } = this.props.window;
+    const { name, posX, posY, width, height, temp } = this.props.window;
 
     this.state = {
       name: name,
@@ -20,7 +20,8 @@ class ResizableComp extends Component {
       height: height,
       positionX: posX,
       positionY: posY,
-      zIndex: zIndex
+      temp: temp,
+      zIndex: 0
     };
   }
 
@@ -40,28 +41,10 @@ class ResizableComp extends Component {
     const offsetX = event.clientX - rect.left;
     const offsetY = event.clientY - rect.top;
   
-    // Retrieve windows from local storage
-    const windows = JSON.parse(localStorage.getItem("windows"));
-  
-    // Get the current window's name from state
-    const currentWindowName = this.state.name;
-  
-    // Find the current window in the array
-    const currentWindow = windows.find((window) => window.name === currentWindowName);
-
-    const maxZIndex = Math.max(...windows.map((window) => window.zIndex || 0));
-  
-    // Lower the zIndex for other windows greater than the current window's zIndex
-    windows.forEach((window) => {
-      if (window.name !== currentWindowName && window.zIndex > currentWindow.zIndex) {
-        window.zIndex--;
-      }
-    });
-
-    currentWindow.zIndex = maxZIndex;
-
-    // Update the windows array in local storage
-    localStorage.setItem("windows", JSON.stringify(windows));
+    const wIndex = JSON.parse(localStorage.getItem("wIndex"));
+    const maxZIndex = wIndex.length;
+    const windowName = wIndex.splice(wIndex.indexOf(this.state.name), 1);
+    localStorage.setItem("wIndex", JSON.stringify([...wIndex, ...windowName]));
 
     // Update the state to initiate dragging
     this.setState({
@@ -157,23 +140,23 @@ class ResizableComp extends Component {
   };
 
   handleMouseUp = () => {
-    const { name, positionX, positionY, width, height } = this.state;
-    const windows = JSON.parse(localStorage.getItem("windows"));
-
-    const updatedWindows = windows.map(window => {
-      if (window.name === name) {
-        return {
-          ...window,
-          posX: positionX,
-          posY: positionY,
-          width: width,
-          height: height
-        };
-      }
-      return window;
-    });
-
-    localStorage.setItem("windows", JSON.stringify(updatedWindows));
+    if (!this.state.temp) {
+      const { name, positionX, positionY, width, height, temp } = this.state;
+      const windows = JSON.parse(localStorage.getItem("windows"));
+      const updatedWindows = windows.map(window => {
+        if (window.name === name) {
+          return {
+            ...window,
+            posX: positionX,
+            posY: positionY,
+            width: width,
+            height: height
+          };
+        }
+        return window;
+      });
+      localStorage.setItem("windows", JSON.stringify(updatedWindows));
+    }
 
     this.setState({
       isDragging: false,
@@ -181,10 +164,17 @@ class ResizableComp extends Component {
     });
   };
 
+  getZIndex = (name) => {
+    const wIndex = JSON.parse(localStorage.getItem("wIndex"));
+    if (!wIndex) return 0;
+    const zIndex = wIndex.indexOf(name);
+    return (zIndex >= 0) ? zIndex : 0;
+  }
+
   render() {
     const { name, positionX, positionY, width, height } = this.state;
-    const { openClose, socket } = this.props;
-    const zIndex = this.props.getZIndex(name);
+    const { openClose, mkWin, socket } = this.props;
+    const zIndex = this.getZIndex(name);
 
     return (
       <div
@@ -230,7 +220,7 @@ class ResizableComp extends Component {
           </div>
         </div>
         <div className="content">
-          <WindowRenderer name={name} openClose={this.props.openClose} socket={socket}/>
+          <WindowRenderer name={name} openClose={openClose} mkWin={mkWin} socket={socket}/>
         </div>
       </div>
     );

@@ -63,46 +63,50 @@ class Terminal extends Component {
 
   isValidIPAddress = isValidIPAddress
 
-  print = (output) => {
+  print = (output, extraDetails) => {
     this.setState((prevState) => {
       let updatedOutput = [...prevState.output];
-  
-      if (typeof output === 'string') {
-        // Check if the string represents an HTML table
-        const isTable = output.trim().startsWith('<table>');
-  
-        if (isTable) {
-          // Parse the table string and format timestamp cells
-          const parser = new DOMParser();
-          const tableDoc = parser.parseFromString(output, 'text/html');
-          const tableElement = tableDoc.querySelector('table');
-  
-          const formattedTableRows = Array.from(tableElement.querySelectorAll('tr')).map((row, rowIndex) => {
-            const formattedCells = Array.from(row.children).map((cell, index) => {
-              if (index === row.children.length - 1 && cell.tagName.toLowerCase() === 'td') {
-                const timestamp = new Date(cell.textContent).toString();
-                return <td key={index}>{formatTimestamp(timestamp)}</td>;
-              } else if (index === 1 && cell.textContent === 'Tor.exe') {
-                return (
-                  <td key={index} onClick={() => this.props.openClose('Tor')}>
-                    {cell.textContent}
-                  </td>
-                );
-              }
-              return <td key={index} dangerouslySetInnerHTML={{ __html: cell.outerHTML }} />;
-            });
-  
-            return <tr key={rowIndex}>{formattedCells}</tr>;
+
+      const isTable = output.trim().startsWith('<table>');
+
+      if (isTable) {
+        // Parse the table string and format timestamp cells
+        const parser = new DOMParser();
+        const tableDoc = parser.parseFromString(output, 'text/html');
+        const tableElement = tableDoc.querySelector('table');
+
+        const formattedTableRows = Array.from(tableElement.querySelectorAll('tr')).map((row, rowIndex) => {
+          const formattedCells = Array.from(row.children).map((cell, index) => {
+            if (index === row.children.length - 1 && cell.tagName.toLowerCase() === 'td') {
+              const timestamp = new Date(cell.textContent).toString();
+              return <td key={index}>{formatTimestamp(timestamp)}</td>;
+            } else if (index === 1 && cell.textContent === 'Tor.exe') {
+              return (
+                <td key={index} onClick={() => this.props.openClose('Tor')}>
+                  {cell.textContent}
+                </td>
+              );
+            }
+            return <td key={index} dangerouslySetInnerHTML={{ __html: cell.outerHTML }} />;
           });
-  
-          const formattedTable = (
-            <table>
-              <tbody>{formattedTableRows}</tbody>
-            </table>
-          );
-          updatedOutput.push({ jsx: formattedTable });
-        } else {
-          updatedOutput.push({ text: output });
+
+          return <tr key={rowIndex}>{formattedCells}</tr>;
+        });
+
+        const formattedTable = (
+          <table>
+            <tbody>{formattedTableRows}</tbody>
+          </table>
+        );
+        updatedOutput.push({ jsx: formattedTable });
+      } else {
+        updatedOutput.push({ text: output });
+        if (extraDetails) {
+          updatedOutput.push({ jsx: (
+            <div onClick={() => this.props.mkWin('Metasploit', extraDetails)}>
+              Click
+            </div>
+          ) });
         }
       }
   

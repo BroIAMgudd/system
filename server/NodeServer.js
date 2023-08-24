@@ -38,6 +38,7 @@ const rmH = require('./socketHandlers/remove');
 const moveH = require('./socketHandlers/move');
 const submitTaskH = require('./socketHandlers/submitTask');
 const buyItemH = require('./socketHandlers/buyItem');
+const nmapH = require('./socketHandlers/nmap');
 const testH = require('./socketHandlers/test');
 const heartbeatH = require('./socketHandlers/heartbeat');
 const disconnectH = require('./socketHandlers/disconnect');
@@ -68,7 +69,8 @@ io.on('connection', (socket) => {
   rmH(socket, usersOnline, io);
   moveH(socket, usersOnline, io);
   submitTaskH(socket, usersOnline, io);
-  buyItemH(socket, usersOnline)
+  buyItemH(socket, usersOnline);
+  nmapH(socket, usersOnline);
   testH(socket);
   heartbeatH(socket, usersOnline);
   disconnectH(socket, usersOnline);

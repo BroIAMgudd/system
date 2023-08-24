@@ -6,8 +6,8 @@ import Finances from './Finances'
 import Tor from './Tor'
 import IPList from './IPList'
 
-function WindowRenderer({ name, openClose, socket }) {
-  if (name === 'Terminal') return <TermRender openClose={openClose} socket={socket}/>
+function WindowRenderer({ name, openClose, mkWin, socket }) {
+  if (name === 'Terminal') return <TermRender openClose={openClose} mkWin={mkWin} socket={socket}/>
   if (name === 'Network Dashboard') return <NetworkDashboard socket={socket}/>
   if (name === 'Log Manager') return <LogViewer socket={socket}/>
   if (name === 'Finances') return <Finances socket={socket}/>

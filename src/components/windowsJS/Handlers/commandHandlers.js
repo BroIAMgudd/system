@@ -102,8 +102,8 @@ export const processCommand = (path, args, socket, print, setState) => {
         socket.emit('touch', { name: params[0] });
       }
     },
-    'net': () => {
-      socket.emit('getNetworkProcesses');
+    'nmap': (params) => {
+      socket.emit('nmap', { targetIP: params[0] });
     },
     'net2': () => {
       socket.emit('getNetworkProcesses2');
@@ -141,7 +141,8 @@ export const setPathHandler = (socket, setState, handleRef) => {
 
 export const printHandler = (socket, print) => {
   socket.on('print', (data) => {
-    print(data.msg);
+    const openC = (data.openClose) ? data.openClose : false;
+    print(data.msg, openC);
   });
 };
 

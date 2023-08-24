@@ -13,17 +13,20 @@ class Game extends Component {
       harddrive: 5.00,
       usb: 5.00,
       windows: [],
-      idk: false
+      wIndex: [],
+      toggle: false
     }
   }
 
   componentDidMount() {
     const windows = JSON.parse(localStorage.getItem("windows"));
+    const wIndex = JSON.parse(localStorage.getItem("wIndex"));
     const setState = this.setState.bind(this);
 
     if (windows) {
       setState({
-        windows: windows
+        windows: windows,
+        wIndex: wIndex
       });
     } else {
       setState({
@@ -35,7 +38,7 @@ class Game extends Component {
             posY: 0,
             width: 300,
             height: 200,
-            zIndex: 4
+            temp: false
           },
           {
             render: true,
@@ -44,7 +47,7 @@ class Game extends Component {
             posY: 0,
             width: 300,
             height: 200,
-            zIndex: 3
+            temp: false
           },
           {
             render: true,
@@ -53,7 +56,7 @@ class Game extends Component {
             posY: 0,
             width: 300,
             height: 200,
-            zIndex: 2
+            temp: false
           },
           {
             render: true,
@@ -62,7 +65,7 @@ class Game extends Component {
             posY: 0,
             width: 300,
             height: 200,
-            zIndex: 1
+            temp: false
           },
           {
             render: true,
@@ -71,7 +74,7 @@ class Game extends Component {
             posY: 0,
             width: 300,
             height: 200,
-            zIndex: 0
+            temp: false
           },
           {
             render: true,
@@ -80,11 +83,13 @@ class Game extends Component {
             posY: 0,
             width: 300,
             height: 200,
-            zIndex: 0
+            temp: false
           }
-        ]
+        ],
+        wIndex: ['IPList', 'Tor', 'Finances', 'Log Manager', 'Network Dashboard', 'Terminal' ]
       }, () => {
         localStorage.setItem("windows", JSON.stringify(this.state.windows));
+        localStorage.setItem("wIndex", JSON.stringify(this.state.wIndex));
       });
     }
 
@@ -126,47 +131,51 @@ class Game extends Component {
       });
   
       // Update local storage with the updated windows array
-      localStorage.setItem("windows", JSON.stringify(updatedWindows));
+      localStorage.setItem("windows", JSON.stringify(updatedWindows.filter(window => window.temp === false)));
   
       return { windows: updatedWindows }; // Update the state with the new windows array
     });
   };
 
-  getZIndex = (name) => {
-    const windows = JSON.parse(localStorage.getItem("windows"));
-    if (!windows) return 0;
-    const window = windows.find(window => window.name === name);
-    return window.zIndex;
-  }
-
   update = () => {
     this.setState({
-      idk: !this.state.idk
+      toggle: !this.state.toggle
+    });
+  }
+
+  mkWin = (name, ) => {
+    this.setState(prevState => {
+      const windows = [...prevState.windows, {
+        render: true,
+        name: name,
+        posX: 0,
+        posY: 0,
+        width: 300,
+        height: 200,
+        temp: true
+      }];
+
+      const wIndex = JSON.parse(localStorage.getItem("wIndex"));
+      localStorage.setItem("wIndex", JSON.stringify([...wIndex, name]));
+
+      return { windows: windows }; // Update the state with the new windows array
+    }, () => {
+      this.update();
     });
   }
 
   render() {
     const windows = this.state.windows;
-    const elementsToFind = ['Terminal', 'Network Dashboard', 'Log Manager', 'Finances', 'Tor', 'IPList'];
-    const foundWindows = elementsToFind.map(element => windows.find(window => window.name === element));
-    const [term, net, log, monz, tor, ips] = foundWindows;
     const { socket } = this.props;
-    const getZIndex = this.getZIndex;
-    const openClose = this.openClose;
-    const update = this.update;
+    const { openClose, update, mkWin } = this;
 
-    if (!term) {
-      return null;
-    }
+    if (!windows) { return null; }
 
     return (
       <>
-        {term.render && <DragComp window={term} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
-        {net.render && <DragComp window={net} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
-        {log.render && <DragComp window={log} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
-        {monz.render && <DragComp window={monz} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
-        {tor.render && <DragComp window={tor} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
-        {ips.render && <DragComp window={ips} openClose={openClose} getZIndex={getZIndex} update={update} socket={socket}/>}
+        {windows.map((window) => (
+          window.render && <DragComp window={window} openClose={openClose} mkWin={mkWin} update={update} socket={socket}/>
+        ))}
       </>
     )
   }

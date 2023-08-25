@@ -37,24 +37,37 @@ class ResizableComp extends Component {
 
   handleMouseDown = (event) => {
     event.preventDefault();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left;
-    const offsetY = event.clientY - rect.top;
-  
+
+    let update = false;
     const wIndex = JSON.parse(localStorage.getItem("wIndex"));
     const maxZIndex = wIndex.length;
-    const windowName = wIndex.splice(wIndex.indexOf(this.state.name), 1);
-    localStorage.setItem("wIndex", JSON.stringify([...wIndex, ...windowName]));
 
-    // Update the state to initiate dragging
-    this.setState({
-      zIndex: maxZIndex, 
-      isDragging: true,
-      startOffsetX: offsetX,
-      startOffsetY: offsetY,
-    }, () => {
-      this.props.update();
-    });
+    if (wIndex.slice(-1)[0] !== this.state.name) {
+      const windowName = wIndex.splice(wIndex.indexOf(this.state.name), 1);
+      localStorage.setItem("wIndex", JSON.stringify([...wIndex, ...windowName]));
+      update = true;
+    }
+
+    let isDragging = false, rect, offsetX, offsetY;
+    const targetClass = event.target.className;
+    if (targetClass === 'header' || targetClass === 'title') {
+      rect = event.currentTarget.getBoundingClientRect();
+      offsetX = event.clientX - rect.left;
+      offsetY = event.clientY - rect.top;
+      isDragging = true;
+      update = true;
+    }
+
+    if (update) {
+      this.setState({
+        zIndex: maxZIndex, 
+        isDragging: isDragging,
+        startOffsetX: offsetX,
+        startOffsetY: offsetY,
+      }, () => {
+        this.props.update();
+      });
+    }
   };
 
   handleResizeMouseDown = (event, direction) => {
@@ -158,10 +171,12 @@ class ResizableComp extends Component {
       localStorage.setItem("windows", JSON.stringify(updatedWindows));
     }
 
-    this.setState({
-      isDragging: false,
-      isResizing: false
-    });
+    if (this.state.isDragging || this.state.isResizing) {
+      this.setState({
+        isDragging: false,
+        isResizing: false
+      });
+    }
   };
 
   getZIndex = (name) => {
@@ -219,7 +234,7 @@ class ResizableComp extends Component {
             <i className="close fa-solid fa-xmark fa-lg" onClick={() => openClose(name)}></i>
           </div>
         </div>
-        <div className="content">
+        <div className="content" onClick={this.handleMouseDown}>
           <WindowRenderer name={name} openClose={openClose} mkWin={mkWin} socket={socket}/>
         </div>
       </div>

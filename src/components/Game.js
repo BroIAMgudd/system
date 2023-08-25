@@ -20,10 +20,12 @@ class Game extends Component {
 
   componentDidMount() {
     const windows = JSON.parse(localStorage.getItem("windows"));
-    const wIndex = JSON.parse(localStorage.getItem("wIndex"));
+    let wIndex = JSON.parse(localStorage.getItem("wIndex"));
+    wIndex = wIndex.filter(item => !['Metasploit'].includes(item));
+    localStorage.setItem("wIndex", JSON.stringify(wIndex));
     const setState = this.setState.bind(this);
 
-    if (windows) {
+    if (windows && wIndex) {
       setState({
         windows: windows,
         wIndex: wIndex
@@ -122,18 +124,32 @@ class Game extends Component {
     this.setState(prevState => {
       const updatedWindows = prevState.windows.map(window => {
         if (window.name === name) {
+          if (window.render === false) {
+            const wIndex = JSON.parse(localStorage.getItem("wIndex")) || [];
+            const updatedWIndex = wIndex.filter(item => item !== name);
+            updatedWIndex.push(name);
+            localStorage.setItem("wIndex", JSON.stringify(updatedWIndex));
+          } else if (window.render === true && window.temp === true) {
+            let wIndex = JSON.parse(localStorage.getItem("wIndex")) || [];
+            wIndex = wIndex.filter(item => item !== name);
+            localStorage.setItem("wIndex", JSON.stringify(wIndex));
+            return {
+              ...window,
+              temp: 'delete'
+            };
+          }
+
           return {
             ...window,
-            render: !window.render // Set the render property to false for the matched window
+            render: !window.render
           };
         }
         return window;
       });
-  
-      // Update local storage with the updated windows array
-      localStorage.setItem("windows", JSON.stringify(updatedWindows.filter(window => window.temp === false)));
-  
-      return { windows: updatedWindows }; // Update the state with the new windows array
+
+      localStorage.setItem("windows", JSON.stringify(updatedWindows.filter(window => (window.temp === false))));
+
+      return { windows: updatedWindows.filter(window => (window.temp !== 'delete')) };
     });
   };
 
@@ -143,26 +159,37 @@ class Game extends Component {
     });
   }
 
-  mkWin = (name, ) => {
+  mkWin = (name) => {
     this.setState(prevState => {
-      const windows = [...prevState.windows, {
-        render: true,
-        name: name,
-        posX: 0,
-        posY: 0,
-        width: 300,
-        height: 200,
-        temp: true
-      }];
-
-      const wIndex = JSON.parse(localStorage.getItem("wIndex"));
-      localStorage.setItem("wIndex", JSON.stringify([...wIndex, name]));
-
-      return { windows: windows }; // Update the state with the new windows array
+      const wIndex = JSON.parse(localStorage.getItem("wIndex")) || [];
+      const found = wIndex.includes(name);
+  
+      if (found) {
+        // Move the name to the last element of wIndex
+        const updatedWIndex = wIndex.filter(item => item !== name);
+        updatedWIndex.push(name);
+        localStorage.setItem("wIndex", JSON.stringify(updatedWIndex));
+      } else {
+        // Add the name to wIndex and create a new window
+        const windows = [...prevState.windows, {
+          render: true,
+          name: name,
+          posX: 0,
+          posY: 0,
+          width: 300,
+          height: 200,
+          temp: true
+        }];
+        
+        const updatedWIndex = [...wIndex, name];
+        localStorage.setItem("wIndex", JSON.stringify(updatedWIndex));
+        
+        return { windows: windows };
+      }
     }, () => {
       this.update();
     });
-  }
+  }  
 
   render() {
     const windows = this.state.windows;
@@ -173,8 +200,8 @@ class Game extends Component {
 
     return (
       <>
-        {windows.map((window) => (
-          window.render && <DragComp window={window} openClose={openClose} mkWin={mkWin} update={update} socket={socket}/>
+        {windows.map((window, i) => (
+          window.render && <DragComp key={i} window={window} openClose={openClose} mkWin={mkWin} update={update} socket={socket}/>
         ))}
       </>
     )

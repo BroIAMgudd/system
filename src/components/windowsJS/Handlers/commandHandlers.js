@@ -12,7 +12,7 @@ export const processCommand = (path, args, socket, print, mkWin, setState) => {
     'say': (params) => {
       print(params.join(' '));
     },
-    'clear': (params) => {
+    'clear': () => {
       setState({ output: [] });
     },
     'cd': (params) => {
@@ -106,6 +106,7 @@ export const processCommand = (path, args, socket, print, mkWin, setState) => {
       socket.emit('nmap', { targetIP: params[0] });
     },
     'open': (params) => {
+      //TODO: makes a window weather its valid or not so fix plz
       mkWin(params.join(' '));
     },
   };

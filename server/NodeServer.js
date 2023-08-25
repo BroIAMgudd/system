@@ -15,69 +15,42 @@ const io = socketIO(server, {
 });
 
 // Import socket event handlers
-const registerH = require('./socketHandlers/register');
-const loginH = require('./socketHandlers/login');
-const getUserH = require('./socketHandlers/getUser');
-const loadLocalLogsH = require('./socketHandlers/loadLocalLogs');
-const loadIPsH = require('./socketHandlers/loadIPs');
-const getFinancesH = require('./socketHandlers/getFinances');
-const btcRequestH = require('./socketHandlers/btcRequest');
-const removeLogH = require('./socketHandlers/rmLog');
-const sshH = require('./socketHandlers/ssh');
-const crackH = require('./socketHandlers/crack');
-const cdH = require('./socketHandlers/changeDir');
-const exitH = require('./socketHandlers/exit');
-const whoisH = require('./socketHandlers/whois');
-const nickH = require('./socketHandlers/setNick');
-const makeDirH = require('./socketHandlers/mkdir');
-const dirH = require('./socketHandlers/dir');
-const messageH = require('./socketHandlers/message');
-const touchH = require('./socketHandlers/touch');
-const transferH = require('./socketHandlers/transfer');
-const rmH = require('./socketHandlers/remove');
-const moveH = require('./socketHandlers/move');
-const submitTaskH = require('./socketHandlers/submitTask');
-const buyItemH = require('./socketHandlers/buyItem');
-const nmapH = require('./socketHandlers/nmap');
-const testH = require('./socketHandlers/test');
-const heartbeatH = require('./socketHandlers/heartbeat');
-const disconnectH = require('./socketHandlers/disconnect');
+const handlers = [
+  require('./socketHandlers/register'),
+  require('./socketHandlers/login'),
+  require('./socketHandlers/getUser'),
+  require('./socketHandlers/loadLocalLogs'),
+  require('./socketHandlers/loadIPs'),
+  require('./socketHandlers/getFinances'),
+  require('./socketHandlers/btcRequest'),
+  require('./socketHandlers/rmLog'),
+  require('./socketHandlers/ssh'),
+  require('./socketHandlers/crack'),
+  require('./socketHandlers/changeDir'),
+  require('./socketHandlers/exit'),
+  require('./socketHandlers/whois'),
+  require('./socketHandlers/setNick'),
+  require('./socketHandlers/mkdir'),
+  require('./socketHandlers/dir'),
+  require('./socketHandlers/message'),
+  require('./socketHandlers/touch'),
+  require('./socketHandlers/transfer'),
+  require('./socketHandlers/remove'),
+  require('./socketHandlers/move'),
+  require('./socketHandlers/submitTask'),
+  require('./socketHandlers/buyItem'),
+  require('./socketHandlers/nmap'),
+  require('./socketHandlers/MSFConsole/modules'),
+  require('./socketHandlers/test'),
+  require('./socketHandlers/heartbeat'),
+  require('./socketHandlers/disconnect')
+];
 
 const usersOnline = {};
 const btcPrice = 15798;
 
 io.on('connection', (socket) => {
-  registerH(socket);
-  loginH(socket);
-  getUserH(socket, usersOnline);
-  loadLocalLogsH(socket, usersOnline);
-  loadIPsH(socket, usersOnline);
-  getFinancesH(socket, usersOnline, btcPrice);
-  btcRequestH(socket, usersOnline, btcPrice);
-  removeLogH(socket, usersOnline, io);
-  sshH(socket, usersOnline, io);
-  crackH(socket, usersOnline);
-  cdH(socket, usersOnline);
-  exitH(socket, usersOnline);
-  whoisH(socket, usersOnline);
-  nickH(socket, usersOnline);
-  makeDirH(socket, usersOnline, io);
-  dirH(socket, usersOnline);
-  messageH(socket, usersOnline);
-  touchH(socket, usersOnline, io);
-  transferH(socket, usersOnline, io);
-  rmH(socket, usersOnline, io);
-  moveH(socket, usersOnline, io);
-  submitTaskH(socket, usersOnline, io);
-  buyItemH(socket, usersOnline);
-  nmapH(socket, usersOnline);
-  testH(socket);
-  heartbeatH(socket, usersOnline);
-  disconnectH(socket, usersOnline);
-
-  socket.on('search', (site) => {
-    socket.emit('loadSite', 'store');
-  });
+  handlers.forEach(handler => handler(socket, usersOnline, io, btcPrice));
 });
 
 setInterval(() => {

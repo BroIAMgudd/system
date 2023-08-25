@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import DOMPurify from 'dompurify'
-import '../css/terminal.css'
+import DOMPurify from 'dompurify';
+import '../css/terminal.css';
 import {
   formatTimestamp,
   isValidIPAddress, 

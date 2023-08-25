@@ -5,14 +5,22 @@ import LogViewer from './LogRender'
 import Finances from './Finances'
 import Tor from './Tor'
 import IPList from './IPList'
+import Metasploit from './Metasploit'
+
+const windowComponents = {
+  'Terminal': TermRender,
+  'Network Dashboard': NetworkDashboard,
+  'Log Manager': LogViewer,
+  'Finances': Finances,
+  'Tor': Tor,
+  'IPList': IPList,
+  'Metasploit' : Metasploit
+};
 
 function WindowRenderer({ name, openClose, mkWin, socket }) {
-  if (name === 'Terminal') return <TermRender openClose={openClose} mkWin={mkWin} socket={socket}/>
-  if (name === 'Network Dashboard') return <NetworkDashboard socket={socket}/>
-  if (name === 'Log Manager') return <LogViewer socket={socket}/>
-  if (name === 'Finances') return <Finances socket={socket}/>
-  if (name === 'Tor') return <Tor socket={socket}/>
-  if (name === 'IPList') {return <IPList socket={socket}/>}
+  const Component = windowComponents[name] || null;
+
+  return Component ? <Component openClose={openClose} mkWin={mkWin} socket={socket} /> : null;
 }
 
 export default WindowRenderer

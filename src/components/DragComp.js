@@ -154,7 +154,7 @@ class ResizableComp extends Component {
 
   handleMouseUp = () => {
     if (!this.state.temp) {
-      const { name, positionX, positionY, width, height, temp } = this.state;
+      const { name, positionX, positionY, width, height } = this.state;
       const windows = JSON.parse(localStorage.getItem("windows"));
       const updatedWindows = windows.map(window => {
         if (window.name === name) {

@@ -21,7 +21,7 @@ class Game extends Component {
   componentDidMount() {
     const windows = JSON.parse(localStorage.getItem("windows"));
     let wIndex = JSON.parse(localStorage.getItem("wIndex"));
-    wIndex = wIndex.filter(item => !['Metasploit'].includes(item));
+    // wIndex = wIndex.filter(item => !['Metasploit'].includes(item));
     localStorage.setItem("wIndex", JSON.stringify(wIndex));
     const setState = this.setState.bind(this);
 
@@ -117,39 +117,32 @@ class Game extends Component {
 
     setInterval(() => {
       socket.emit('heartbeat');
-    }, 60000); // Send a heartbeat every 30 seconds  
+    }, 60000);
   }
 
   openClose = (name) => {
     this.setState(prevState => {
+      const windows = JSON.parse(localStorage.getItem("windows"));
       const updatedWindows = prevState.windows.map(window => {
         if (window.name === name) {
-          if (window.render === false) {
-            const wIndex = JSON.parse(localStorage.getItem("wIndex")) || [];
-            const updatedWIndex = wIndex.filter(item => item !== name);
-            updatedWIndex.push(name);
-            localStorage.setItem("wIndex", JSON.stringify(updatedWIndex));
-          } else if (window.render === true && window.temp === true) {
-            let wIndex = JSON.parse(localStorage.getItem("wIndex")) || [];
-            wIndex = wIndex.filter(item => item !== name);
-            localStorage.setItem("wIndex", JSON.stringify(wIndex));
-            return {
-              ...window,
-              temp: 'delete'
-            };
-          }
-
+          const localW = windows.find(window => window.name === name);
           return {
             ...window,
-            render: !window.render
+            render: !window.render,
+            posX: localW.posX,
+            posY: localW.posY,
+            width: localW.width,
+            height: localW.height
           };
         }
+
         return window;
       });
 
-      localStorage.setItem("windows", JSON.stringify(updatedWindows.filter(window => (window.temp === false))));
+      const nonTempW = updatedWindows.filter(window => window.temp !== true);
+      localStorage.setItem("windows", JSON.stringify(nonTempW));
 
-      return { windows: updatedWindows.filter(window => (window.temp !== 'delete')) };
+      return { windows: updatedWindows }
     });
   };
 
@@ -159,16 +152,30 @@ class Game extends Component {
     });
   }
 
-  mkWin = (name) => {
+  mkWin = (name, temp = false) => {
     this.setState(prevState => {
       const wIndex = JSON.parse(localStorage.getItem("wIndex")) || [];
       const found = wIndex.includes(name);
-  
+
       if (found) {
         // Move the name to the last element of wIndex
         const updatedWIndex = wIndex.filter(item => item !== name);
         updatedWIndex.push(name);
         localStorage.setItem("wIndex", JSON.stringify(updatedWIndex));
+  
+        const windows = prevState.windows.map(window => {
+          if (window.name === name) {
+            return {
+              ...window,
+              render: true
+            };
+          }
+          return window;
+        });
+        const nonTempW = windows.filter(window => (window.temp !== true));
+        localStorage.setItem("windows", JSON.stringify(nonTempW));
+
+        return { windows: windows };
       } else {
         // Add the name to wIndex and create a new window
         const windows = [...prevState.windows, {
@@ -178,12 +185,16 @@ class Game extends Component {
           posY: 0,
           width: 300,
           height: 200,
-          temp: true
+          temp: temp
         }];
-        
+
         const updatedWIndex = [...wIndex, name];
         localStorage.setItem("wIndex", JSON.stringify(updatedWIndex));
-        
+  
+        if (!temp) {
+          localStorage.setItem("windows", JSON.stringify(windows));
+        }
+  
         return { windows: windows };
       }
     }, () => {

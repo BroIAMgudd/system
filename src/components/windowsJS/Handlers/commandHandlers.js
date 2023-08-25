@@ -5,7 +5,7 @@ export const isValidIPAddress = (ipAddress) => {
   return ipPattern.test(ipAddress);
 };
 
-export const processCommand = (path, args, socket, print, setState) => {
+export const processCommand = (path, args, socket, print, mkWin, setState) => {
   print(`${path}> ${args.join(' ')}`);
 
   const commands = {
@@ -105,8 +105,8 @@ export const processCommand = (path, args, socket, print, setState) => {
     'nmap': (params) => {
       socket.emit('nmap', { targetIP: params[0] });
     },
-    'net2': () => {
-      socket.emit('getNetworkProcesses2');
+    'open': (params) => {
+      mkWin(params.join(' '));
     },
   };
 

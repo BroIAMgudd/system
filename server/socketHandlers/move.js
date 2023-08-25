@@ -11,7 +11,7 @@ module.exports = function (socket, usersOnline, io) {
     if (!user) { socket.disconnect(); return; }
 
     const { fileInfo, updatePath, search } = data;
-    const { ip, connTo, path, nick } = user;
+    const { ip, connTo, path } = user;
     const targetIP = (connTo === '') ? ip : connTo;
     let targetNick;
     

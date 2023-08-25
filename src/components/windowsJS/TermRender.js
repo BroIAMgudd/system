@@ -58,10 +58,18 @@ class Terminal extends Component {
 
   processCommand = (args) => {
     const setState = this.setState.bind(this);
-    processCommand(this.state.path, args, this.props.socket, this.print, setState);
+    processCommand(this.state.path, args, this.props.socket, this.print, this.props.mkWin, setState);
   };
 
   isValidIPAddress = isValidIPAddress
+
+  toggleWin = (name, temp, text) => {
+    return (
+      <div onClick={() => this.props.mkWin(name, temp)}>
+        {text}
+      </div>
+    )
+  }
 
   print = (output, extraDetails) => {
     this.setState((prevState) => {
@@ -82,8 +90,8 @@ class Terminal extends Component {
               return <td key={index}>{formatTimestamp(timestamp)}</td>;
             } else if (index === 1 && cell.textContent === 'Tor.exe') {
               return (
-                <td key={index} onClick={() => this.props.openClose('Tor')}>
-                  {cell.textContent}
+                <td key={index}>
+                  {this.toggleWin('Tor', false, cell.textContent)}
                 </td>
               );
             }
@@ -101,13 +109,6 @@ class Terminal extends Component {
         updatedOutput.push({ jsx: formattedTable });
       } else {
         updatedOutput.push({ text: output });
-        if (extraDetails) {
-          updatedOutput.push({ jsx: (
-            <div onClick={() => this.props.mkWin('Metasploit', extraDetails)}>
-              Click
-            </div>
-          ) });
-        }
       }
   
       return { output: updatedOutput };

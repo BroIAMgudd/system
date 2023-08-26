@@ -41,6 +41,8 @@ const handlers = [
   require('./socketHandlers/buyItem'),
   require('./socketHandlers/nmap'),
   require('./socketHandlers/MSFConsole/modules'),
+  require('./socketHandlers/MSFConsole/use'),
+  require('./socketHandlers/MSFConsole/exploit'),
   require('./socketHandlers/test'),
   require('./socketHandlers/heartbeat'),
   require('./socketHandlers/disconnect')

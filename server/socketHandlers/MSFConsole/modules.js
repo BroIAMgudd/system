@@ -1,9 +1,9 @@
-const { getModuleList, findModuleFromList } = require('../Functions/msfReq');
+const { getModuleList } = require('../Functions/msfReq');
 const { findUser } = require('../helper');
 const pool = require('../mysqlPool');
 
-module.exports = function (socket, usersOnline, io) {
-  socket.on('modules', async (data) => {
+module.exports = function (socket, usersOnline) {
+  socket.on('modules', async () => {
     const user = findUser(usersOnline, 'id', socket.id);
     if (!user) { socket.disconnect(); return; }
 
@@ -14,7 +14,22 @@ module.exports = function (socket, usersOnline, io) {
       try {
         const list = await getModuleList(conn, username);
 
-        console.log(list);
+        if (list.length > 0) {
+          const types = separateByType(list);
+
+          let html = types.map((type) => {
+            if (type.length > 0) {
+              sortByServices(type);
+              return `${createTable(type)}`;
+            }
+            return '';
+          }).join('');
+
+          socket.emit('msfprint', { msg: html });
+        } else {
+          socket.emit('msfprint', { msg: 'No modules found.' });
+        }
+
       } finally {
         conn.release();
       }
@@ -31,40 +46,41 @@ async function getFilesList(conn, ip, path) {
   );
 }
 
-function separateFilesAndFolders(files) {
-  const folders = [];
-  const filesList = [];
+function separateByType(modules) {
+  const Exploits = [];
+  const Payloads = [];
+  const Encoders = [];
+  const Nops = [];
+  const Auxiliary = [];
 
-  files.forEach(file => {
-    const entry = {
-      id: file.id,
-      name: file.ext === 'folder' ? file.filename : `${file.filename}.${file.ext}`,
-      type: file.ext === 'folder' ? 'Folder' : 'File',
-      size: file.ext === 'folder' ? '' : file.size,
-      modification: file.modification,
-      version: file.ext === 'folder' ? '' : `v${file.version}`
-    };
-
-    if (file.ext === 'folder') {
-      folders.push(entry);
-    } else {
-      filesList.push(entry);
+  modules.forEach(item => {
+    if (item.type === 'Exploits') {
+      Exploits.push(item);
+    } else if (item.type === 'Payloads') {
+      Payloads.push(item);
+    } else if (item.type === 'Encoders') {
+      Encoders.push(item);
+    } else if (item.type === 'Nops') {
+      Nops.push(item);
+    } else if (item.type === 'Auxiliary') {
+      Auxiliary.push(item);
     }
   });
 
-  return { folders, filesList };
+  return [Exploits, Payloads, Encoders, Nops, Auxiliary];
 }
 
-function sortEntriesAlphabetically(entries) {
-  entries.sort((a, b) => a.name.localeCompare(b.name));
+function sortByServices(items) {
+  items.sort((a, b) => a.service.localeCompare(b.service));
 }
 
 function createTable(entries) {
-  const tableHeader = '<table><tr><th>ID</th><th>Name</th><th>Type</th><th>Size</th><th>Version</th><th>Last Modified</th></tr>';
+  const tableType = `<h3 style="margin: 0;">${entries[0].type}<br/>========</h3>`
+  const tableHeader = '<table><tr><th>ID</th><th>Name</th><th>Service</th><th>Level</th></tr>';
   const tableRows = entries.map(entry => {
-    return `<tr><td>${entry.id}</td><td>${entry.name}</td><td>${entry.type}</td><td>${entry.size}</td><td>${entry.version}</td><td>${entry.modification}</td></tr>`;
+    return `<tr><td>${entry.id}</td><td>${entry.name}</td><td>${entry.service}</td><td>${entry.level}</td></tr>`;
   }).join('');
   const tableFooter = '</table>';
 
-  return tableHeader + tableRows + tableFooter;
+  return tableType + tableHeader + tableRows + tableFooter;
 }

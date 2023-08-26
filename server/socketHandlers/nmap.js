@@ -40,13 +40,11 @@ module.exports = function (socket, usersOnline, io) {
           break nmap;
         }
 
-        const nmapV = nmapQuery[0].version;
-        const { security } = targetSys;
-        const factor = parseFloat(nmapV) / security;
-        const ports = generateRandomPortInfo(factor);
+        const portQuery = await getPorts(conn, targetSys.username);
+        const ports = portQuery.length > 0 ? portQuery : null;
 
         let output = `Network Scanning Report<br>
-        ------------------------<br><br>
+        ------------------------<br>
                 
         Scanning Target: ${targetIP}<br><br>
                 
@@ -54,25 +52,24 @@ module.exports = function (socket, usersOnline, io) {
         &nbsp;&nbsp;- Host: ${targetIP} - Up<br><br>
                 
         Open Ports:<br>`;
-        for (const portInfo of ports) {
-          output += `&nbsp;&nbsp;- Port ${portInfo.port} (${portInfo.serviceName}) - ${portInfo.isOpen ? 'Open' : 'Closed'}<br>`;
+        if (ports) {
+          for (const portInfo of ports) {
+            output += `&nbsp;&nbsp;- Port ${portInfo.number} (${portInfo.service}) - ${(portInfo.vulnerable === 0) ? 'Open' : 'Vulnerable'}<br>`;
+          }
+        } else {
+          output += `&nbsp;&nbsp;- No Open Ports Found<br>`;
         }
-
         output += `<br>Detected Services:<br>`;
         for (const portInfo of ports) {
-          if (portInfo.isOpen) {
-            output += `&nbsp;&nbsp;- Port ${portInfo.port} (${portInfo.serviceName}) - ${portInfo.serviceVersion}<br>`;
-          }
+          output += `&nbsp;&nbsp;- Port ${portInfo.number} (${portInfo.service}) - ${portInfo.application}<br>`;
         }
 
         output += `<br>Potential Vulnerabilities:<br>`;
         for (const portInfo of ports) {
-          if (portInfo.isOpen) {
-            output += `&nbsp;&nbsp;- Port ${portInfo.port} (${portInfo.serviceName}) - ${portInfo.vulnerability}<br>`;
-          }
+          output += `&nbsp;&nbsp;- Port ${portInfo.number} (${portInfo.service}) - ${genVulnerability(portInfo.service)}<br>`;
         }
 
-        socket.emit('print', { msg: output, openClose: { name: 'Metasploit', info: ports, targetIP: targetIP } } );
+        socket.emit('print', { msg: output } );
       } finally {
         conn.release();
       }
@@ -83,6 +80,12 @@ module.exports = function (socket, usersOnline, io) {
     }
   });
 };
+
+async function getPorts(conn, username) {
+  const query = 'SELECT * FROM ports WHERE username = ?';
+  const [rows] = await conn.query(query, [username]);
+  return rows;
+}
 
 function version() {
   return `${Math.floor(Math.random() * 10) + 1}.${Math.floor(Math.random() * 99) + 1}.${Math.floor(Math.random() * 99) + 1}`

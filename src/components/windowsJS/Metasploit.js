@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import DOMPurify from 'dompurify';
 import '../css/terminal.css';
-import { processCommand, printHandler } from './Handlers/MetasploitHandlers';
+import { processCommand, printHandler, setModuleHandler } from './Handlers/MetasploitHandlers';
 
 class Terminal extends Component {
   constructor(props) {
@@ -13,6 +13,10 @@ class Terminal extends Component {
     this.state = {
       input: '',
       output: [],
+      rhost: '',
+      rport: '',
+      exploit: {},
+      payload: {},
       rmWidth: 0
     };
   }
@@ -22,9 +26,10 @@ class Terminal extends Component {
     this.handleRef();
 
     const { socket } = this.props;
-    // const setState = this.setState.bind(this);
+    const setState = this.setState.bind(this);
 
     printHandler(socket, this.print);
+    setModuleHandler(socket, setState);
   }
 
   handleEnter = (e) => {
@@ -42,7 +47,7 @@ class Terminal extends Component {
 
   processCommand = (args) => {
     const setState = this.setState.bind(this);
-    processCommand(args, this.props.socket, this.print, setState);
+    processCommand(args, this.props.socket, this.print, setState, this.state);
   };
 
   print = (output) => {

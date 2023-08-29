@@ -5,12 +5,12 @@ export const isValidIPAddress = (ipAddress) => {
   return ipPattern.test(ipAddress);
 };
 
-export const processCommand = (path, args, socket, print, mkWin, setState) => {
+export const processCommand = (path, args, socket, print, mkWin, state, setState) => {
   print(`${path}> ${args.join(' ')}`);
 
   const commands = {
-    'say': (params) => {
-      print(params.join(' '));
+    'ipreset': () => {
+      socket.emit('ipreset');
     },
     'clear': () => {
       setState({ output: [] });
@@ -23,7 +23,8 @@ export const processCommand = (path, args, socket, print, mkWin, setState) => {
       }
     },
     'dir': (params) => {
-      socket.emit('dir');
+      const path = params[0] || state.path;
+      socket.emit('dir', path);
     },
     'ul': (params) => {
       socket.emit('transfer', { fileInfo: params[0], type: 'ul', search: 'name' });
@@ -45,7 +46,7 @@ export const processCommand = (path, args, socket, print, mkWin, setState) => {
     },
     'whois': (params) => {
       if (isValidIPAddress(params[0])) {
-        socket.emit('whois', { ip: params[0] });
+        socket.emit('whois', params[0]);
       } else {
         print(`Invalid IP Address: ${params[0]}`);
       }
@@ -73,6 +74,20 @@ export const processCommand = (path, args, socket, print, mkWin, setState) => {
       } else {
         socket.emit('mkdir', { name: params[0] });
       }
+    },
+    'nas': (params) => {
+      const type = params[0].slice(0,7).toLowerCase().replace('rm', 'remove') || '';
+      const search = params[0].replace('rm', 'remove').slice(7,9) || 'name';
+      const targetFile = params[1] || '';
+
+      if (type === 'ls') {
+        socket.emit('dir', `C:/nas/${state.nick}/${targetFile}`);
+        return;
+      }
+
+      if (!['restore', 'backup', 'remove'].includes(type)) { print('Must choose to either Restore or Backup a file'); return; }
+      if (!targetFile) { print(`Must choose a file to ${type}`); return; }
+      socket.emit('nas', { fileInfo: targetFile, type: type, search: search });
     },
     'move': (params) => {
       if (!params[0] || !params[1]) {
@@ -108,7 +123,7 @@ export const processCommand = (path, args, socket, print, mkWin, setState) => {
     'open': (params) => {
       //TODO: makes a window weather its valid or not so fix plz
       mkWin(params.join(' '));
-    },
+    }
   };
 
   const [command, ...params] = args;
@@ -149,11 +164,12 @@ export const printHandler = (socket, print) => {
 
 export const whoisHandler = (socket, print) => {
   socket.on('whois', (data) => {
-    const { username, cpu, ram, netName, harddrive, uptime } = data;
+    const { username, cpu, ram, netName, harddrive, uptime, oldIP } = data;
 
     const text = `Username: ${username}<br>Network: ${netName}<br>Cpu: ${cpu} kHz<br>Ram: ${ram} bytes <br>Disk Space: ${harddrive} MB<br>Time played: ${uptime} sec`;
 
     print(text);
+    if (oldIP) { print('This IP is no longer valid') }
   });
 };
 //TODO: Format Timestamp options Ex. DD/MM/YYYY

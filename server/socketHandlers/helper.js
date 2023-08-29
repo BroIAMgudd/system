@@ -11,10 +11,10 @@ function isValidIPAddress(ipAddress) {
 }
 
 function parsePath(currentPath, newPath) {
-  const isAbsolutePath = newPath.startsWith('C:/');
+  const isAbsolutePath = newPath.toLowerCase().startsWith('c:/');
   
   if (isAbsolutePath) {
-    return newPath.replace('C:/', '');
+    return newPath.slice(3);
   } else if (newPath.includes('..')) {
     return manipulateDirectory(currentPath, newPath)
   } else {

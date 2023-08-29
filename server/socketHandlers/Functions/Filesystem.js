@@ -1,3 +1,10 @@
+async function getFilesList(conn, ip, path) {
+  return conn.query(
+    'SELECT id, filename, ext, size, modification, version FROM filesystem WHERE ip = ? AND path = ?',
+    [ip, path]
+  );
+}
+
 async function getFile(conn, searchType, fileInfo, targetIP = null, path = null) {
   let sql = 'SELECT * FROM filesystem WHERE';
   sql += (searchType === 'id') ? ' id = ?' : ' filename = ?';
@@ -31,9 +38,18 @@ async function rmFilePath(conn, ip, path) {
   );
 }
 
+async function updateFileIPs(conn, oldIP, newIP) {
+  await conn.query('UPDATE filesystem SET ip = ? WHERE ip = ?', [
+    newIP,
+    oldIP
+  ]);
+}
+
 module.exports = {
+  getFilesList,
   getFile,
   createFile,
   rmFile,
-  rmFilePath
+  rmFilePath,
+  updateFileIPs
 };

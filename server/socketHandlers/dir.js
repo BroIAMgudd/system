@@ -1,33 +1,41 @@
 const pool = require('./mysqlPool');
+const { findUser, parsePath, isValidPath } = require('./helper');
 
 module.exports = function (socket, usersOnline) {
-  socket.on('dir', async () => {
-    if (!usersOnline[socket.id]) {
-      socket.disconnect();
-      return;
-    }
+  socket.on('dir', async (setPath) => {
+    const user = findUser(usersOnline, 'id', socket.id);
+    if (!user) { socket.disconnect(); return; }
 
     try {
-      const user = usersOnline[socket.id];
-      const ip = user.connTo === '' ? user.ip : user.connTo;
+      const { ip, connTo, nick, path } = user;
+      const targetIP = (connTo === '') ? ip : connTo;
       const conn = await pool.getConnection();
 
       try {
-        const [files] = await getFilesList(conn, ip, user.path);
+        const sanitizedPath = setPath.replace(/\\/g, '/').replace(/^\.\/(?!\.\/)/, '').replace(/^\/|\/$/g, '');
+        const updatedPath = parsePath(path, sanitizedPath);
 
-        if (files.length > 0) {
-          const { folders, filesList } = separateFilesAndFolders(files);
-    
-          sortEntriesAlphabetically(folders);
-          sortEntriesAlphabetically(filesList);
-    
-          const entries = [...folders, ...filesList];
-          const table = createTable(entries);
-    
-          socket.emit('print', { msg: table });
-        } else {
-          socket.emit('print', { msg: 'No files or folders found in the current directory.' });
+        if (!updatedPath) {
+          socket.emit('print', { msg: `Invalid path - Cannot go back beyond the root folder: ${path}` });
+          return;
         }
+        
+        const [files] = await getFilesList(conn, targetIP, updatedPath);
+
+        if (files.length === 0) {
+          socket.emit('print', { msg: 'No files or folders found in the current directory.' });
+          return;
+        }
+
+        const { folders, filesList } = separateFilesAndFolders(files);
+  
+        sortEntriesAlphabetically(folders);
+        sortEntriesAlphabetically(filesList);
+  
+        const entries = [...folders, ...filesList];
+        const table = createTable(entries);
+  
+        socket.emit('print', { msg: table });
       } finally {
         conn.release();
       }

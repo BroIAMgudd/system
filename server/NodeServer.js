@@ -22,6 +22,7 @@ const handlers = [
   require('./socketHandlers/loadLocalLogs'),
   require('./socketHandlers/loadIPs'),
   require('./socketHandlers/getFinances'),
+  require('./socketHandlers/ipReset'),
   require('./socketHandlers/btcRequest'),
   require('./socketHandlers/rmLog'),
   require('./socketHandlers/ssh'),

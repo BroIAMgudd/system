@@ -16,7 +16,7 @@ export const addFileTaskHandle = (socket, setState) => {
 export const setTasksHandle = (socket, setState) => {
   socket.on('setNetworkProcesses', (tasks) => {
     setState({ 
-      networkProcesses: [tasks],
+      networkProcesses: tasks,
       selectedTask: 0
     });
   });

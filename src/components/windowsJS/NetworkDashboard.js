@@ -68,10 +68,10 @@ class NetworkDashboard extends Component {
   }
 
   selectTask = (id) => {
-    const setID = (this.state.selectedTask === id) ? 0 : id
+    const setID = (this.state.selectedTask === id) ? 0 : id;
     this.setState({
       selectedTask: setID
-    })
+    });
   }
 
   submitTask = (id) => {

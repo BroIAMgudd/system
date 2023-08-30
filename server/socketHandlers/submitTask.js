@@ -29,8 +29,10 @@ module.exports = function (socket, usersOnline, io) {
           case 'Remove':
             deleteFile(conn, socket, task, user, usersOnline, io);
             break;
-          case 'Upload':
-          case 'Download':
+            case 'Upload':
+            case 'Download':
+            case 'Restore':
+            case 'Backup':
             transfer(conn, socket, task, user, usersOnline, io);
             break;
           case 'Crack':
@@ -80,7 +82,7 @@ async function deleteFile(conn, socket, task, user, usersOnline, io) {
 }
 
 async function transfer(conn, socket, task, user, usersOnline, io) {
-  const { id, targetIP, targetID, actionType } = task;
+  const { id, targetIP, targetID, actionType, extraDetails } = task;
   const { ip } = user;
 
   const sender = (actionType === 'Upload') ? ip : targetIP;
@@ -98,18 +100,20 @@ async function transfer(conn, socket, task, user, usersOnline, io) {
   }
 
   const file = fileRows[0];
-  const receiverNick = targetSys.nick;
-  const { filename, ext, path } = file;
+  let receiverPath = (actionType !== 'Backup') ? targetSys.nick : `nas/${targetSys.nick}`;
+  if (extraDetails) { receiverPath = extraDetails; }
+  const { filename, ext } = file;
+  const path = (actionType !== 'Restore') ? file.path : file.path.replace('nas/', '');
 
   if (ext === 'folder') {
-    const folderDup = await getFile(conn, 'name', filename, receiver, receiverNick);
+    const folderDup = await getFile(conn, 'name', filename, receiver, receiverPath, 'folder');
 
     if (folderDup) {
       socket.emit('print', { msg: 'Folder with same name already exists.' });
       return;
     }
 
-    await createFile(conn, file, receiver, receiverNick);
+    await createFile(conn, file, receiver, receiverPath);
     
     const [folderContents] = await conn.query(
       'SELECT * FROM filesystem WHERE ip = ? AND path LIKE ?',
@@ -132,19 +136,20 @@ async function transfer(conn, socket, task, user, usersOnline, io) {
         version: item.version
       }
 
-      await createFile(conn, contentFile, receiver, `${receiverNick}/${itemPath}`);
+      await createFile(conn, contentFile, receiver, `${receiverPath}/${itemPath}`);
     });
   } else {
-    await createFile(conn, file, receiver, receiverNick);
+    await createFile(conn, file, receiver, receiverPath);
   }
 
   await rmTask(conn, id, socket);
 
   const fileType = (file.ext === 'folder') ? 'Folder' : 'File';
   const fileName = (file.ext === 'folder') ? filename : `${filename}.${ext}`;
-  socket.emit('print', { msg: `${actionType}ed ${fileType}: ${fileName}` });
+  socket.emit('print', { msg: `${actionType} ${fileType}: ${fileName}` });
 
   addLog(conn, receiver, sender, `${actionType} ${fileType}`, fileName, usersOnline, io);
+  if (actionType === 'Backup' || actionType === 'Restore') { return; }
   addLog(conn, sender, receiver, `${actionType} ${fileType}`, fileName, usersOnline, io);
 }
 

@@ -5,15 +5,17 @@ async function getFilesList(conn, ip, path) {
   );
 }
 
-async function getFile(conn, searchType, fileInfo, targetIP = null, path = null) {
+async function getFile(conn, searchType, fileInfo, targetIP = null, path = null, ext = null) {
   let sql = 'SELECT * FROM filesystem WHERE';
   sql += (searchType === 'id') ? ' id = ?' : ' filename = ?';
   sql += (targetIP) ? ' AND ip = ?' : '';
   sql += (path) ? ' AND path = ?' : '';
+  sql += (ext) ? ' AND ext = ?' : '';
 
   let values = [fileInfo];
   if (targetIP) values.push(targetIP);
   if (path) values.push(path);
+  if (ext) values.push(ext);
 
   const [rows] = await conn.query(sql, values);
   return (rows.length > 0) ? rows : null;

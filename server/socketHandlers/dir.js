@@ -2,13 +2,14 @@ const pool = require('./mysqlPool');
 const { findUser, parsePath, isValidPath } = require('./helper');
 
 module.exports = function (socket, usersOnline) {
-  socket.on('dir', async (setPath) => {
+  socket.on('dir', async (data) => {
     const user = findUser(usersOnline, 'id', socket.id);
     if (!user) { socket.disconnect(); return; }
 
     try {
+      const { setPath, local } = data;
       const { ip, connTo, nick, path } = user;
-      const targetIP = (connTo === '') ? ip : connTo;
+      const targetIP = (connTo === '' || local === true) ? ip : connTo;
       const conn = await pool.getConnection();
 
       try {

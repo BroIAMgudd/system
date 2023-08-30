@@ -14,14 +14,25 @@ module.exports = function (socket, usersOnline, io) {
       return;
     }
 
+    let sendPath = data.sendPath;
     const { fileInfo, type, search } = data;
     const sender = (type === 'ul') ? ip : connTo;
+    const receiver = (type === 'ul') ? connTo : ip;
     const taskType = (type === 'ul') ? 'Upload' : 'Download';
     const conn = await pool.getConnection();
 
     transfer: try {
-      const filePath = (type === 'ul') ? nick : path;
-      const fileRows = await getFile(conn, search, fileInfo, sender, filePath);
+      let fileRows;
+      if (fileInfo.startsWith('C:') && search === 'name') {
+        const fullPath = fileInfo.slice(3);
+        const lastSlashIndex = fullPath.lastIndexOf('/');
+        const dirPath = fullPath.substring(0, lastSlashIndex);
+        const filename = fullPath.substring(lastSlashIndex + 1);
+        fileRows = await getFile(conn, search, filename, sender, dirPath);
+      } else {
+        const filePath = (type === 'ul') ? nick : path;
+        fileRows = await getFile(conn, search, fileInfo, sender, filePath);
+      }
 
       if (!fileRows) {
         socket.emit('print', { msg: 'File not found.' });
@@ -31,7 +42,25 @@ module.exports = function (socket, usersOnline, io) {
         break transfer;
       }
 
-      addFileTask(taskType, fileRows[0], user, connTo, socket);
+      let validPath = false;
+      if (sendPath) {
+        if (sendPath.startsWith('C:')) {
+          sendPath = sendPath.slice(3);
+          const lastSlashIndex = sendPath.lastIndexOf('/');
+          const dirPath = sendPath.substring(0, lastSlashIndex);
+          const foldername = sendPath.substring(lastSlashIndex + 1);
+          folder = await getFile(conn, 'name', foldername, receiver, dirPath) || [];
+          if (folder.length === 1) {
+            validPath = true;
+          } else {
+            socket.emit('print', { msg: 'Path does not exist' });
+          }
+        } else {
+          socket.emit('print', { msg: 'Send Path must be a absolute path Ex. C:\\HiGuys\\test1' });
+        }
+      }
+
+      addFileTask(socket, taskType, fileRows[0], user, connTo, (validPath) ? sendPath : null);
     } catch (err) {
       console.error('Upload Error:', err.message);
       socket.emit('print', { msg: 'An error occurred during file upload.' });

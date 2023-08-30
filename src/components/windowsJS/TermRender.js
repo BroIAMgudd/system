@@ -58,7 +58,7 @@ class Terminal extends Component {
 
   processCommand = (args) => {
     const setState = this.setState.bind(this);
-    processCommand(this.state.path, args, this.props.socket, this.print, this.props.mkWin, this.state, setState);
+    processCommand(args, this.props.socket, this.print, this.props.mkWin, this.state, setState);
   };
 
   isValidIPAddress = isValidIPAddress
@@ -71,7 +71,7 @@ class Terminal extends Component {
     )
   }
 
-  print = (output, extraDetails) => {
+  print = (output) => {
     this.setState((prevState) => {
       let updatedOutput = [...prevState.output];
 

@@ -5,9 +5,7 @@ export const isValidIPAddress = (ipAddress) => {
   return ipPattern.test(ipAddress);
 };
 
-export const processCommand = (path, args, socket, print, mkWin, state, setState) => {
-  print(`${path}> ${args.join(' ')}`);
-
+export const processCommand = (args, socket, print, mkWin, state, setState) => {
   const commands = {
     'ipreset': () => {
       socket.emit('ipreset');
@@ -23,20 +21,25 @@ export const processCommand = (path, args, socket, print, mkWin, state, setState
       }
     },
     'dir': (params) => {
-      const path = params[0] || state.path;
-      socket.emit('dir', path);
+      let path = params[0] || state.path;
+      if (local && !params[0]) { path = `C:/${state.nick}`}
+      socket.emit('dir', { setPath: path, local: local });
     },
     'ul': (params) => {
-      socket.emit('transfer', { fileInfo: params[0], type: 'ul', search: 'name' });
+      const sendPath = params[1] || null;
+      socket.emit('transfer', { fileInfo: params[0], type: 'ul', search: 'name', sendPath: sendPath });
     },
     'ulid': (params) => {
-      socket.emit('transfer', { fileInfo: params[0], type: 'ul', search: 'id' });
+      const sendPath = params[1] || null;
+      socket.emit('transfer', { fileInfo: params[0], type: 'ul', search: 'id', sendPath: sendPath });
     },
     'dl': (params) => {
-      socket.emit('transfer', { fileInfo: params[0], type: 'dl', search: 'name' });
+      const sendPath = params[1] || null;
+      socket.emit('transfer', { fileInfo: params[0], type: 'dl', search: 'name', sendPath: sendPath });
     },
     'dlid': (params) => {
-      socket.emit('transfer', { fileInfo: params[0], type: 'dl', search: 'id' });
+      const sendPath = params[1] || null;
+      socket.emit('transfer', { fileInfo: params[0], type: 'dl', search: 'id', sendPath: sendPath });
     },
     'rm': (params) => {
       socket.emit('rm', { fileInfo: params[0], search: 'name' });
@@ -76,16 +79,20 @@ export const processCommand = (path, args, socket, print, mkWin, state, setState
       }
     },
     'nas': (params) => {
-      const type = params[0].slice(0,7).toLowerCase().replace('rm', 'remove') || '';
-      const search = params[0].replace('rm', 'remove').slice(7,9) || 'name';
+      let type = params[0].slice(0,7).toLowerCase().replace('rm', 'remove') || '';
+      const search = params[0].slice(-2) || 'name';
       const targetFile = params[1] || '';
 
-      if (type === 'ls') {
-        socket.emit('dir', `C:/nas/${state.nick}/${targetFile}`);
+      if (type === 'dir') {
+        socket.emit('dir', { setPath: `C:/nas/${state.nick}/${targetFile}`, local: local });
         return;
       }
 
-      if (!['restore', 'backup', 'remove'].includes(type)) { print('Must choose to either Restore or Backup a file'); return; }
+      type = type.charAt(0).toUpperCase() + type.slice(1);
+      console.log(search);
+
+      if (!['Restore', 'Backup', 'Remove'].includes(type)) { print('Must choose to either Restore or Backup a file'); return; }
+
       if (!targetFile) { print(`Must choose a file to ${type}`); return; }
       socket.emit('nas', { fileInfo: targetFile, type: type, search: search });
     },
@@ -126,7 +133,72 @@ export const processCommand = (path, args, socket, print, mkWin, state, setState
     }
   };
 
-  const [command, ...params] = args;
+  const aliases = {
+    'ls': 'dir',
+    'connect': 'ssh',
+    './': state.path + '/',
+    'nick': 'C:/' + state.nick,
+    'A': ['ssh', '106.235.140.216'],
+    'B': ['ul', 'nick/test1', './test1']
+  };
+  
+  const newArgs = [];
+  let local = false;
+
+  function replaceAliases(input, aliases) {
+    return input.map(arg => {
+      let replacedArg = arg.toString();
+      console.log(replacedArg);
+  
+      for (const alias of Object.keys(aliases)) {
+        if (replacedArg.toLowerCase() === alias.toLowerCase()) {
+          replacedArg = aliases[alias];
+        } else if (alias === './') {
+          const leadingSlash = replacedArg.startsWith('./');
+          if (leadingSlash) {
+            replacedArg = `${aliases[alias]}${replacedArg.substring(2)}`;
+          }
+        } else {
+          replacedArg = replacedArg.replace(new RegExp(`\\b${alias}\\b`, 'ig'), aliases[alias]);
+        }
+      }
+  
+      return replacedArg;
+    });
+  }
+
+  args.forEach(arg => {
+    let replacedArg = arg.toString();
+    let skipPush = false;
+
+    for (const alias of Object.keys(aliases)) {
+      if (Array.isArray(aliases[alias])) {
+        const subAlias = aliases[alias][0];
+        const subParams = aliases[alias].slice(1);
+
+        if (replacedArg.toLowerCase() === alias.toLowerCase()) {
+          const replacedSubParams = replaceAliases(subParams, aliases);
+          newArgs.push(subAlias, ...replacedSubParams);
+          skipPush = true;
+          break;
+        } else {
+          replacedArg = replacedArg.replace(new RegExp(`\\b${alias}\\b`, 'ig'), subAlias);
+        }
+      } else if (replacedArg.toLowerCase() === alias.toLowerCase()) {
+        replacedArg = aliases[alias];
+      } else if (replacedArg.startsWith('./')) {  
+        replacedArg = `${aliases['./']}${replacedArg.substring(2)}`;
+      } else {
+        replacedArg = replacedArg.replace(new RegExp(`\\b${alias}\\b`, 'ig'), aliases[alias]);
+      }
+    }
+
+    if (replacedArg === 'local') { local = true; return; }
+    if (!skipPush) { newArgs.push(replacedArg); }
+  });
+
+  const [command, ...params] = newArgs;
+  print(`${state.path}> ${newArgs.join(' ')}`.replace(/\//g, '\\'));
 
   if (commands[command]) {
     commands[command](params);
@@ -134,7 +206,7 @@ export const processCommand = (path, args, socket, print, mkWin, state, setState
     print(`I have not implemented: ${command}`);
   }
 };
-//Socket Requests
+
 export const setNickHandler = (socket, setState, handleRef) => {
   socket.on('setNick', (data) => {
     setState({

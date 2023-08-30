@@ -13,17 +13,37 @@ module.exports = function (socket, usersOnline, io) {
     const targetIP = (!connTo) ? ip : connTo;
     const conn = await pool.getConnection();
   
-    remove: try {
-      const fileRows = await getFile(conn, search, fileInfo, targetIP, path);
+    try {
+      let fileRows;
+      if (search === 'name') {
+        const absPath = fileInfo.startsWith('C:');
+        let fullPath = fileInfo.replace(/\\/g, '/');
+        let dirPath = '', filename = '';
+        if (absPath) { fullPath = fullPath.slice(3); }
+        const lastSlashIndex = fullPath.lastIndexOf('/');
+
+        if ( lastSlashIndex > -1 ) {
+          if (!absPath) dirPath += path+'/';
+          dirPath += fullPath.substring(0, lastSlashIndex);
+          filename = fullPath.substring(lastSlashIndex + 1);
+        } else {
+          dirPath = path;
+          filename = fullPath;
+        }
+
+        fileRows = await getFile(conn, search, filename, targetIP, dirPath);
+      } else {
+        fileRows = await getFile(conn, search, fileInfo, targetIP, path);
+      }
 
       if (!fileRows) {
         socket.emit('print', { msg: 'File not found.' });
-        break remove;
+        return;
       } if (fileRows.length > 1) {
         socket.emit('print', { msg: 'Multiple files found with that name use file id instead.' });
-        break remove;
+        return;
       }
-      addFileTask('Remove', fileRows[0], user, targetIP, socket);
+      addFileTask(socket, 'Remove', fileRows[0], user, targetIP);
     } catch (error) {
       console.error('Remove Error:', error.message);
       socket.emit('print', { msg: 'An error occurred while removing the file.' });

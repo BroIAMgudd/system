@@ -1,7 +1,7 @@
 const pool = require('./mysqlPool');
 const { findUser } = require('./helper');
-const { getFilesList } = require('./Functions/Filesystem');
-const { deleteTaskByUser, deleteTaskByIP } = require('./Functions/Tasks');
+const { getFile } = require('./Functions/Filesystem');
+const { addFileTask } = require('./dbRequests');
 
 module.exports = function (socket, usersOnline) {
   socket.on('nas', async (data) => {
@@ -9,12 +9,13 @@ module.exports = function (socket, usersOnline) {
     if (!user) { socket.disconnect(); return; }
 
     try {
-      const { username, ip, path } = user;
+      const { username, ip, nick, path } = user;
       const { fileInfo, type, search } = data;
       const conn = await pool.getConnection();
 
       try {
-        const fileRows = await getFile(conn, search, fileInfo, ip, path);
+        const filePath = (type === 'Backup') ? path : `nas/${nick}`;
+        const fileRows = await getFile(conn, search, fileInfo, ip, filePath);
 
         if (!fileRows) {
           socket.emit('print', { msg: 'File not found.' });
@@ -25,7 +26,7 @@ module.exports = function (socket, usersOnline) {
         }
 
         //do ul/dl for nas restore/backup
-        addFileTask(type, fileRows[0], user, targetIP, socket);
+        addFileTask(socket, type, fileRows[0], user, ip);
       } finally {
         conn.release();
       }

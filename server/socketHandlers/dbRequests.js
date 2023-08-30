@@ -1,24 +1,26 @@
 const pool = require('./mysqlPool');
 const { addSeconds, calcMBSpeed } = require('./helper');
 
-async function addFileTask(taskType, file, user, targetIP, socket) {
+async function addFileTask(socket, taskType, file, user, targetIP, info = null) {
   try {
     const { username } = user;
     const { id, filename, ext, size, path } = file;
     const conn = await pool.getConnection();
     try {
-      const taskTypeMap = {
+      const taskTypeMap = { //determines what stat to use for speed
         'Remove': 'cpu',
         'Upload': 'upload',
-        'Download': 'download'
+        'Download': 'download',
+        'Restore': 'download',
+        'Backup': 'upload'
       };
       
       const stats = await getStats(username);
       const speed = parseFloat(stats[taskTypeMap[taskType]]).toFixed(2);
       const timer = Math.max(calcMBSpeed(size, speed), 5);
       const endDate = addSeconds(Date.now(), timer);
-      const [result] = await conn.query('INSERT INTO tasks (targetID, username, filename, ext, targetIP, path, actionType, endTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
-        [id, username, filename, ext, targetIP, path, taskType, endDate]
+      const [result] = await conn.query('INSERT INTO tasks (targetID, username, filename, ext, targetIP, path, actionType, extraDetails, endTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+        [id, username, filename, ext, targetIP, path, taskType, info, endDate]
       );
 
       socket.emit('addNetworkProcess', {
@@ -28,7 +30,7 @@ async function addFileTask(taskType, file, user, targetIP, socket) {
         ext: ext,
         targetIP: targetIP,
         path: path,
-        duration: timer, // Duration in seconds
+        duration: timer,
         taskid: result.insertId
       });
 

@@ -1,0 +1,38 @@
+.notify-container {
+  position: relative;
+  z-index: 100;
+  color: azure;
+  float: right;
+  right: 2px;
+  overflow-wrap: break-word;
+}
+
+.notif-close {
+  position: relative;
+  float: right;
+  top: 10px;
+}
+
+.red {
+  color: red;
+}
+
+.notif {
+  background: black;
+  border: 1.5px solid;
+  min-width: 250px;
+  max-width: 300px;
+}
+
+.notif-header {
+  padding: 5px 10px;
+  border-bottom: 1.5px solid;
+}
+
+.notif-title {
+  display: inline;
+}
+
+.notif-text {
+  padding: 5px 10px 5px 10px;
+}

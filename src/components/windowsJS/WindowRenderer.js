@@ -17,7 +17,7 @@ const windowComponents = {
   'Metasploit' : Metasploit
 };
 
-function WindowRenderer({ name, openClose, mkWin, socket }) {
+const WindowRenderer = ({ name, openClose, mkWin, socket }) => {
   const Component = windowComponents[name] || null;
 
   return Component ? <Component openClose={openClose} mkWin={mkWin} socket={socket} /> : null;

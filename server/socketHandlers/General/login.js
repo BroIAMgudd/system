@@ -36,9 +36,8 @@ async function isPasswordValid(plainPassword, hashedPassword) {
 }
 
 async function updateSessionAndLastOnline(conn, sessionId, username) {
-  await conn.query('UPDATE users SET sessionID = ?, lastOnline = ? WHERE username = ?', [
+  await conn.query('UPDATE users SET sessionID = ?, lastOnline = DEFAULT WHERE username = ?', [
     sessionId,
-    Date.now(),
     username
   ]);
 }

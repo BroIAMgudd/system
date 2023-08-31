@@ -1,5 +1,7 @@
 import React, { Component } from 'react'
 import DragComp from './DragComp'
+import Notification from './Notification';
+import './css/Notification.css';
 
 class Game extends Component {
   constructor(props) {
@@ -14,7 +16,8 @@ class Game extends Component {
       usb: 5.00,
       windows: [],
       wIndex: [],
-      toggle: false
+      notify: [{title: 'test', color:'red', text:'testtestetasdsdas'}],
+      toggle: false,
     }
   }
 
@@ -200,12 +203,16 @@ class Game extends Component {
     }, () => {
       this.update();
     });
-  }  
+  }
+
+  removeNotify = (index) => this.setState(
+    { notify: this.state.notify.filter((_, i) => i !== index) }
+  );
 
   render() {
-    const windows = this.state.windows;
-    const { socket } = this.props;
     const { openClose, update, mkWin } = this;
+    const { windows, notify } = this.state;
+    const { socket } = this.props;
 
     if (!windows) { return null; }
 
@@ -214,6 +221,19 @@ class Game extends Component {
         {windows.map((window, i) => (
           window.render && <DragComp key={i} window={window} openClose={openClose} mkWin={mkWin} update={update} socket={socket}/>
         ))}
+
+        Display Notifications
+        <div className="notify-container">
+          {notify.map((notif, index) => (
+            <Notification
+              key={index}
+              title={notif.title}
+              text={notif.text}
+              color={notif.color}
+              onClose={() => this.removeNotify(index)}
+            />
+          ))}
+        </div>
       </>
     )
   }

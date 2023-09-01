@@ -110,7 +110,7 @@ async function getPacket(code) {
     try {
       const [row] = await conn.query('SELECT * FROM btcpackets WHERE code = ?', [code]);
       const packet = row[0];
-      if (packet.expired === 0) {
+      if (packet && packet.expired === 0) {
         await conn.query('UPDATE btcpackets SET expired = ? WHERE code = ?', [1, code]);
         return packet.amount;
       } else {

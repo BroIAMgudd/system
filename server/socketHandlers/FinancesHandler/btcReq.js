@@ -1,4 +1,5 @@
 const pool = require('../mysqlPool');
+const { formatMoney } = require('../Functions/helper');
 const {
   bankBuy,
   getFinances, 
@@ -10,7 +11,7 @@ const {
   getPacket
 } = require('../Functions/Finances');
 
-module.exports = function (socket, usersOnline, price) {
+module.exports = function (socket, usersOnline, _, price) {
   socket.on('btcRequest', async (data) => {
     try {
       const { username } = usersOnline[socket.id];
@@ -38,9 +39,9 @@ module.exports = function (socket, usersOnline, price) {
           const newBtcTotal = (parseFloat(buyAmt) + walletAmt).toFixed(4);
           updateWallet(username, newBtcTotal);
           socket.emit('updateBtcAmt', newBtcTotal);
-          socket.emit('btcInfo', `Bought ${buyAmt} BTC`);
+          socket.emit('appendNotify', { title: `BTC Purchase`, text: `Bought ${buyAmt} BTC for ${formatMoney(cost)}`, color: 'btc'});
         } else {
-          socket.emit('btcInfo', 'Not Enough Mon Monz');
+          socket.emit('appendNotify', { title: `Banking Transaction ERROR`, text: 'You dont have enough money to buy that much btc', color: 'btc'});
         }
       } else if (option === 'sell') {
         const sellAmt = parseFloat(input);
@@ -59,9 +60,9 @@ module.exports = function (socket, usersOnline, price) {
           const newBtcTotal = (walletAmt-sellAmt).toFixed(4);
           await updateWallet(username, newBtcTotal);
           socket.emit('updateBtcAmt', newBtcTotal);
-          socket.emit('btcInfo', `Sold ${sellAmt.toFixed(4)} BTC`);
+          socket.emit('appendNotify', { title: `BTC Sold`, text: `Sold ${sellAmt.toFixed(4)} BTC for ${formatMoney(money)}`, color: 'btc'});
         } else {
-          socket.emit('btcInfo', `Not enough BTC`);
+          socket.emit('appendNotify', { title: `BTC Transaction ERROR`, text: 'You dont have enough btc to sell', color: 'btc'});
         }
       } else if (option === 'create') {
         const storeAmt = parseFloat(input);
@@ -74,9 +75,9 @@ module.exports = function (socket, usersOnline, price) {
           await createPacket(result, storeAmt);
 
           socket.emit('updateBtcAmt', newBtcTotal);
-          socket.emit('btcInfo', `Created Packet for ${storeAmt.toFixed(4)} BTC => ${result}`);
+          socket.emit('appendNotify', { title: `BTC Packet Create`, text: `Created Packet for ${storeAmt.toFixed(4)} BTC ${result}`, color: 'btc'});
         } else {
-          socket.emit('btcInfo', `Not enoughs BTC`);
+          socket.emit('appendNotify', { title: `LOL Poor`, text: 'You dont have enough btc to create that packet', color: 'btc'});
         }
       } else if (option === 'redeem') {
         const code = input.trim();
@@ -86,9 +87,9 @@ module.exports = function (socket, usersOnline, price) {
           const newBtcTotal = (walletAmt+parseFloat(packAmt)).toFixed(4);
           await updateWallet(username, newBtcTotal);
           socket.emit('updateBtcAmt', newBtcTotal);
-          socket.emit('btcInfo', `Claimed ${packAmt} BTC`);
+          socket.emit('appendNotify', { title: `Redeem BTC Packet`, text: `Redeemed Packet for ${packAmt} BTC`, color: 'btc'});
         } else {
-          socket.emit('btcInfo', 'Packet has Expired');
+          socket.emit('appendNotify', { title: `Packet Expired`, text: 'The Packet that you have attempted to redeem has already been claimed or is invalid', color: 'btc'});
         }
       }
     } catch (err) {

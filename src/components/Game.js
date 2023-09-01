@@ -16,7 +16,7 @@ class Game extends Component {
       usb: 5.00,
       windows: [],
       wIndex: [],
-      notify: [{title: 'test', color:'red', text:'testtestetasdsdas'}],
+      notify: [],
       toggle: false,
     }
   }
@@ -103,6 +103,7 @@ class Game extends Component {
 
     if (socket) {
       socket.emit('getUser');
+      socket.on('appendNotify', notif => this.appendNotify(notif));
       socket.on('receiveUser', (data) => {
         const { ip, cpu, network, harddrive, usb } = data.system;
 
@@ -209,6 +210,10 @@ class Game extends Component {
     { notify: this.state.notify.filter((_, i) => i !== index) }
   );
 
+  appendNotify = (notif) => this.setState((prevState) =>
+    ({ notify: [...prevState.notify, notif] })
+  );
+
   render() {
     const { openClose, update, mkWin } = this;
     const { windows, notify } = this.state;
@@ -218,6 +223,7 @@ class Game extends Component {
 
     return (
       <>
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.2/css/all.css"></link>
         {windows.map((window, i) => (
           window.render && <DragComp key={i} window={window} openClose={openClose} mkWin={mkWin} update={update} socket={socket}/>
         ))}

@@ -202,7 +202,6 @@ class ResizableComp extends Component {
           zIndex: zIndex
         }}
       >
-        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.2/css/all.css"></link>
         <div
           className="resize"
           onMouseDown={(e) => this.handleResizeMouseDown(e, 'nw')}

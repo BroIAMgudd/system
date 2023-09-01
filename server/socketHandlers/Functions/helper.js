@@ -105,6 +105,15 @@ function findUser(usersOnline, search, data) {
   return null;
 }
 
+function formatMoney(amount) {
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  });
+
+  return formatter.format(amount);
+}
+
 module.exports = {
   generateRandomIP,
   isValidIPAddress,
@@ -112,5 +121,6 @@ module.exports = {
   isValidPath,
   addSeconds,
   calcMBSpeed,
-  findUser
+  findUser,
+  formatMoney
 };

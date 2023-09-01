@@ -1,38 +1,48 @@
 .notify-container {
-  position: relative;
+  overflow-wrap: break-word;
+  position: fixed;
   z-index: 100;
-  color: azure;
   float: right;
   right: 2px;
-  overflow-wrap: break-word;
+  bottom: 0;
 }
 
 .notif-close {
   position: relative;
   float: right;
-  top: 10px;
+  top: 8px;
 }
 
 .red {
   color: red;
 }
 
+.btc {
+  color: green;
+}
+
 .notif {
   background: black;
   border: 1.5px solid;
-  min-width: 250px;
-  max-width: 300px;
+  width: 250px;
 }
 
 .notif-header {
-  padding: 5px 10px;
   border-bottom: 1.5px solid;
+  padding: 4px 5px;
+  height: 25px;
 }
 
 .notif-title {
-  display: inline;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: azure;
+  float: left;
 }
 
 .notif-text {
   padding: 5px 10px 5px 10px;
+  font-size: 14px;
+  min-height: 100px;
+  color: azure;
 }
